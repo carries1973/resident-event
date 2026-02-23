@@ -1,0 +1,234 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   RESIDENT EVENT IDEAS — Custom Design Tokens
+   These extend shadcn's default theme with our brand colours.
+   Light theme default. Dark theme via .dark class on <html>.
+   ============================================================ */
+
+@theme {
+  /* Fonts */
+  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Custom App Colours — Light Theme */
+  --color-page: #F8F9FC;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F1F3F8;
+  --color-sidebar-bg: #1A1D2E;
+
+  --color-text-primary: #1A1D2E;
+  --color-text-secondary: #4A5068;
+  --color-text-muted: #6B7189;
+  --color-text-inverse: #F0F1F5;
+
+  --color-brand: #8F1D23;
+  --color-brand-hover: #731820;
+  --color-brand-light: #FDF2F2;
+  --color-success: #16A34A;
+  --color-success-light: #ECFDF5;
+  --color-warning: #D97706;
+  --color-warning-light: #FFFBEB;
+  --color-danger: #DC2626;
+  --color-danger-light: #FEF2F2;
+
+  --color-border-default: #E2E5EB;
+  --color-border-subtle: #F0F1F5;
+
+  /* Custom Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-overlay: 0 8px 30px rgba(0, 0, 0, 0.12);
+
+  /* Layout Dimensions */
+  --sidebar-width: 256px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 56px;
+}
+
+/* ============================================================
+   Dark Theme Overrides (custom tokens only)
+   ============================================================ */
+.dark {
+  --color-page: #0F1117;
+  --color-surface: #1A1D2E;
+  --color-surface-hover: #232738;
+
+  --color-text-primary: #E8EAF0;
+  --color-text-secondary: #B0B5C8;
+  --color-text-muted: #8891AD;
+  --color-text-inverse: #1A1D2E;
+
+  --color-brand: #C0464D;
+  --color-brand-hover: #D4666C;
+  --color-brand-light: #2D1214;
+  --color-success: #34D399;
+  --color-success-light: #0D2818;
+  --color-warning: #FBBF24;
+  --color-warning-light: #2D2006;
+  --color-danger: #F87171;
+  --color-danger-light: #2D0F0F;
+
+  --color-border-default: #2A2E3F;
+  --color-border-subtle: #1F2233;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-overlay: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   shadcn/ui Theme — Mapped to Our Brand
+   ============================================================ */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  /* shadcn light theme — customised to match our brand */
+  --background: oklch(0.98 0.002 270);      /* #F8F9FC approx */
+  --foreground: oklch(0.17 0.02 270);       /* #1A1D2E approx */
+  --card: oklch(1 0 0);                     /* #FFFFFF */
+  --card-foreground: oklch(0.17 0.02 270);  /* #1A1D2E */
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.02 270);
+  --primary: oklch(0.38 0.14 25);            /* #8F1D23 maroon */
+  --primary-foreground: oklch(1 0 0);       /* white text on maroon */
+  --secondary: oklch(0.97 0.002 270);       /* #F1F3F8 approx */
+  --secondary-foreground: oklch(0.17 0.02 270);
+  --muted: oklch(0.95 0.002 270);           /* #F0F1F5 approx */
+  --muted-foreground: oklch(0.48 0.02 270); /* #6B7189 approx */
+  --accent: oklch(0.95 0.01 25);            /* #FDF2F2 warm grey/maroon tint */
+  --accent-foreground: oklch(0.17 0.02 270);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.005 270);          /* #E2E5EB approx */
+  --input: oklch(0.91 0.005 270);
+  --ring: oklch(0.38 0.14 25);              /* Match primary maroon */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.17 0.02 270);           /* #1A1D2E dark sidebar */
+  --sidebar-foreground: oklch(0.95 0.002 270); /* light text on dark sidebar */
+  --sidebar-primary: oklch(0.38 0.14 25);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.22 0.02 270);
+  --sidebar-accent-foreground: oklch(0.95 0.002 270);
+  --sidebar-border: oklch(0.25 0.02 270);
+  --sidebar-ring: oklch(0.38 0.14 25);
+}
+
+/* ============================================================
+   Base Styles
+   ============================================================ */
+html {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ============================================================
+   Skeleton Shimmer Animation
+   ============================================================ */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-border-subtle) 25%,
+    var(--color-surface-hover) 50%,
+    var(--color-border-subtle) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   Scrollbar Styling
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
