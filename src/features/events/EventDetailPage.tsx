@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { EventStatusFlow } from './EventStatusFlow'
 import { EventOverviewTab } from './tabs/EventOverviewTab'
 import { EventMarketingTab } from './tabs/EventMarketingTab'
+import { EventPromoKitTab } from './tabs/EventPromoKitTab'
 import { EventPosterTab } from './tabs/EventPosterTab'
 import { EventDayOfTab } from './tabs/EventDayOfTab'
 import { EventCloseoutTab } from './tabs/EventCloseoutTab'
@@ -132,6 +133,10 @@ export function EventDetailPage() {
             Marketing
             {event.marketing && <Badge variant="outline" className="h-4 px-1 text-[10px]">✓</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="promokit" className="gap-1.5">
+            Promo Kit
+            {event.marketing && <Badge variant="outline" className="h-4 px-1 text-[10px]">✓</Badge>}
+          </TabsTrigger>
           <TabsTrigger value="poster">Poster</TabsTrigger>
           <TabsTrigger value="dayof" className="gap-1.5">
             Day-Of
@@ -162,6 +167,9 @@ export function EventDetailPage() {
         </TabsContent>
         <TabsContent value="marketing">
           <EventMarketingTab event={event} />
+        </TabsContent>
+        <TabsContent value="promokit">
+          <EventPromoKitTab event={event} />
         </TabsContent>
         <TabsContent value="poster">
           <EventPosterTab event={event} />
