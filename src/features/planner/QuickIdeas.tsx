@@ -7,6 +7,9 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Play,
+  Trash2,
+  Building2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -59,6 +62,7 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
   const [error, setError] = useState<string | null>(null)
   const [sessions, setSessions] = useState<QuickIdeasSession[]>(loadSessions)
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const generate = useCallback(
     async (overrideTopic?: string) => {
@@ -89,7 +93,6 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
 
         setIdeas(parsed.data)
 
-        // Save to session history
         const newSession: QuickIdeasSession = {
           id: crypto.randomUUID(),
           topic: effectiveTopic
@@ -120,8 +123,24 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
     setIdeas((prev) => prev.filter((_, i) => i !== index))
   }, [])
 
+  const handleResumeSession = (session: QuickIdeasSession) => {
+    setIdeas(session.ideas)
+    setTopic(session.topic === 'Surprise me' ? '' : session.topic)
+    setError(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDeleteSession = (id: string) => {
+    const updated = sessions.filter((s) => s.id !== id)
+    setSessions(updated)
+    saveSessions(updated)
+    setDeleteConfirmId(null)
+    if (expandedSessionId === id) setExpandedSessionId(null)
+  }
+
   const toggleSession = (id: string) => {
     setExpandedSessionId((prev) => (prev === id ? null : id))
+    setDeleteConfirmId(null)
   }
 
   const formatSessionDate = (iso: string) => {
@@ -135,13 +154,45 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
     })
   }
 
+  // Building summary for item 7
+  const amenitySummary = [
+    ...(building.amenities ?? []),
+    ...(building.customAmenities ?? []),
+  ].slice(0, 4).join(' · ')
+
+  const hasAmenities = (building.amenities?.length ?? 0) > 0 || (building.customAmenities?.length ?? 0) > 0
+
   return (
     <div className="space-y-6 mt-4">
-      {/* Explainer */}
-      <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-text-secondary space-y-1">
-        <p><span className="font-medium text-text-primary">Quick Ideas</span> — Type a theme and get 6–8 brainstorm ideas instantly.</p>
-        <p>Use <span className="font-medium text-text-primary">Save to Events</span> to park an idea for later, or <span className="font-medium text-text-primary">Build Full Plan</span> to generate it with dates, budget, and logistics.</p>
-        <p>For a full calendar plan with dates, switch to the <span className="font-medium text-text-primary">Full Plan</span> tab above.</p>
+      {/* Explainer — only shown when no sessions yet (item 6) */}
+      {sessions.length === 0 && (
+        <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-text-secondary space-y-1">
+          <p className="font-medium text-text-primary">Getting started</p>
+          <p>Select your building, describe the type of event you want, and hit <span className="font-medium text-text-primary">Generate Ideas</span> — or use <span className="font-medium text-text-primary">Surprise Me</span> for a random mix.</p>
+          <p>Select a concept to save it or build a full event plan.</p>
+        </div>
+      )}
+
+      {/* Building data summary (item 7) */}
+      <div className="flex items-start gap-2 text-sm">
+        <Building2 className="h-4 w-4 text-text-muted mt-0.5 shrink-0" />
+        {hasAmenities ? (
+          <p className="text-text-muted">
+            {amenitySummary}
+            {(building.amenities?.length ?? 0) + (building.customAmenities?.length ?? 0) > 4 && (
+              <span> · +{(building.amenities?.length ?? 0) + (building.customAmenities?.length ?? 0) - 4} more</span>
+            )}
+            {building.unitCount && <span> · {building.unitCount} units</span>}
+          </p>
+        ) : (
+          <p className="text-text-muted">
+            No amenities added for this building.{' '}
+            <a href="/buildings" className="text-primary underline underline-offset-2">
+              Add them in Buildings
+            </a>{' '}
+            for more tailored ideas.
+          </p>
+        )}
       </div>
 
       {/* Input area */}
@@ -262,7 +313,7 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
         </div>
       )}
 
-      {/* Recent sessions */}
+      {/* Recent sessions (item 5) */}
       {sessions.length > 0 && (
         <div className="space-y-3 pt-4 border-t">
           <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
@@ -272,12 +323,14 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
           <div className="space-y-2">
             {sessions.map((session) => (
               <div key={session.id} className="rounded-lg border">
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/50 transition-colors"
-                  onClick={() => toggleSession(session.id)}
-                >
-                  <div className="min-w-0">
+                {/* Session header */}
+                <div className="flex w-full items-center justify-between px-4 py-3">
+                  {/* Left: title + meta */}
+                  <button
+                    type="button"
+                    className="flex-1 text-left min-w-0"
+                    onClick={() => toggleSession(session.id)}
+                  >
                     <p className="text-sm font-medium text-text-primary truncate">
                       {session.topic}
                     </p>
@@ -285,14 +338,69 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
                       {session.building} &middot; {formatSessionDate(session.createdAt)} &middot;{' '}
                       {session.ideas.length} idea{session.ideas.length !== 1 ? 's' : ''}
                     </p>
-                  </div>
-                  {expandedSessionId === session.id ? (
-                    <ChevronUp className="h-4 w-4 text-text-muted shrink-0" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-text-muted shrink-0" />
-                  )}
-                </button>
+                  </button>
 
+                  {/* Right: actions */}
+                  <div className="flex items-center gap-1 shrink-0 ml-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 h-7 px-2 text-xs"
+                      onClick={() => handleResumeSession(session)}
+                      title="Reload this session's ideas"
+                    >
+                      <Play className="h-3 w-3" />
+                      Resume
+                    </Button>
+
+                    {deleteConfirmId === session.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-text-muted">Delete?</span>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => handleDeleteSession(session.id)}
+                        >
+                          Yes
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setDeleteConfirmId(null)}
+                        >
+                          No
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-text-muted hover:text-danger"
+                        onClick={() => setDeleteConfirmId(session.id)}
+                        title="Delete this session"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="p-1 text-text-muted hover:text-text-primary transition-colors"
+                      onClick={() => toggleSession(session.id)}
+                      aria-label={expandedSessionId === session.id ? 'Collapse' : 'Expand'}
+                    >
+                      {expandedSessionId === session.id ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Session ideas */}
                 {expandedSessionId === session.id && (
                   <div className="px-4 pb-3 border-t">
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pt-3">
@@ -303,7 +411,6 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
                           building={building}
                           onExpandToFullPlan={onExpandToFullPlan}
                           onDismiss={() => {
-                            // Remove idea from session history
                             const updated = sessions.map((s) =>
                               s.id === session.id
                                 ? { ...s, ideas: s.ideas.filter((_, i) => i !== idx) }

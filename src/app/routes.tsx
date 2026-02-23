@@ -25,6 +25,12 @@ import { ObservancesPage } from '@/features/observances/ObservancesPage'
 
 // Settings (real)
 import { DataBackupPage } from '@/features/settings/DataBackupPage'
+import { PropertyProfilePage } from '@/features/settings/PropertyProfilePage'
+import { FeedbackPage } from '@/features/settings/FeedbackPage'
+
+// Assets (stub pages)
+import { EventPackagesPage } from '@/features/assets/EventPackagesPage'
+import { ResourceLibraryPage } from '@/features/assets/ResourceLibraryPage'
 
 // Planner (real)
 import { PlannerPage } from '@/features/planner/PlannerPage'
@@ -75,7 +81,13 @@ export function AppRoutes() {
         <Route path="/events/:id/edit" element={<EventFormPage />} />
 
         <Route path="/observances" element={<ObservancesPage />} />
+
+        <Route path="/assets/packages" element={<EventPackagesPage />} />
+        <Route path="/assets/library" element={<ResourceLibraryPage />} />
+
+        <Route path="/settings/profile" element={<PropertyProfilePage />} />
         <Route path="/settings/data" element={<DataBackupPage />} />
+        <Route path="/settings/feedback" element={<FeedbackPage />} />
       </Route>
 
       {/* 404 — inside layout so sidebar is still visible */}

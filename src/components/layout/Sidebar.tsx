@@ -7,6 +7,10 @@ import {
   Calendar,
   Heart,
   Database,
+  Package,
+  Library,
+  UserCog,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store/appStore'
@@ -40,9 +44,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    title: 'Assets',
+    items: [
+      { label: 'Event Packages', to: '/assets/packages', icon: <Package className="h-4 w-4" /> },
+      { label: 'Resource Library', to: '/assets/library', icon: <Library className="h-4 w-4" /> },
+    ],
+  },
+  {
     title: 'Settings',
     items: [
+      { label: 'Property Profile', to: '/settings/profile', icon: <UserCog className="h-4 w-4" /> },
       { label: 'Data & Backup', to: '/settings/data', icon: <Database className="h-4 w-4" /> },
+      { label: 'Feedback', to: '/settings/feedback', icon: <MessageSquare className="h-4 w-4" /> },
     ],
   },
 ]

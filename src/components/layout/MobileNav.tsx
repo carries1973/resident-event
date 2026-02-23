@@ -14,6 +14,8 @@ interface MobileNavItem {
   icon: React.ReactNode
 }
 
+// Keep to 5 items max — bottom bar space is limited
+// Assets & Settings are accessible via desktop sidebar only on mobile
 const MOBILE_NAV_ITEMS: MobileNavItem[] = [
   { label: 'Home', to: '/', icon: <LayoutDashboard className="h-5 w-5" /> },
   { label: 'Planner', to: '/planner', icon: <Sparkles className="h-5 w-5" /> },

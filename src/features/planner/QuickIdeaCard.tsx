@@ -1,5 +1,5 @@
-import { CalendarPlus, Wand2, X, MapPin } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState } from 'react'
+import { CalendarPlus, Wand2, X, MapPin, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,8 +16,10 @@ interface QuickIdeaCardProps {
 
 export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }: QuickIdeaCardProps) {
   const createEvent = useEventStore((s) => s.createEvent)
+  const [saved, setSaved] = useState(false)
 
   const handleSaveAsDraft = () => {
+    if (saved) return
     createEvent({
       name: idea.name,
       buildingId: building.id,
@@ -27,7 +29,7 @@ export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }:
       source: 'brainstorm',
       aiGenerated: true,
     })
-    toast.success(`"${idea.name}" saved as draft — add dates in Events.`)
+    setSaved(true)
   }
 
   const handleExpandToFullPlan = () => {
@@ -49,8 +51,8 @@ export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }:
           {idea.description}
         </p>
 
-        {/* Badges */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Meta */}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
           {idea.suggestedLocation && (
             <Badge variant="secondary" className="gap-1">
               <MapPin className="h-3 w-3" />
@@ -60,26 +62,34 @@ export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }:
           {idea.category && (
             <Badge variant="outline">{idea.category}</Badge>
           )}
+          <span className="text-text-muted italic">Date & time: set in Full Plan</span>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-1 border-t border-border-default mt-auto">
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 border-primary text-primary hover:bg-primary/10"
-            onClick={handleSaveAsDraft}
-            title="Save this idea as a draft event — you can add dates and details later"
-          >
-            <CalendarPlus className="h-3.5 w-3.5" />
-            Save to Events
-          </Button>
+          {saved ? (
+            <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
+              <Check className="h-4 w-4" />
+              Saved to Events
+            </span>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-primary text-primary hover:bg-primary/10"
+              onClick={handleSaveAsDraft}
+              title="Save this idea as a draft event — add dates and details later in Events"
+            >
+              <CalendarPlus className="h-3.5 w-3.5" />
+              Save to Events
+            </Button>
+          )}
           <Button
             size="sm"
             variant="default"
             className="gap-1.5"
             onClick={handleExpandToFullPlan}
-            title="Use this idea as the starting point for a full AI-generated event plan with dates, budget, and logistics"
+            title="Use this as the starting point for a full AI-generated event plan with dates, budget, and logistics"
           >
             <Wand2 className="h-3.5 w-3.5" />
             Build Full Plan
