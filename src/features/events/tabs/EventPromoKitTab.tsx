@@ -45,6 +45,7 @@ interface UnsplashPhoto {
   id: string
   urls: { regular: string; small: string }
   alt_description: string | null
+  links: { download_location: string }
   user: { name: string; links: { html: string } }
 }
 
@@ -58,6 +59,16 @@ async function fetchUnsplashPhoto(query: string): Promise<UnsplashPhoto | null> 
     return data.results?.[0] ?? null
   } catch {
     return null
+  }
+}
+
+// Required by Unsplash API guidelines: trigger a download event when a photo is used
+async function triggerUnsplashDownload(downloadLocation: string): Promise<void> {
+  if (!UNSPLASH_KEY) return
+  try {
+    await fetch(`${downloadLocation}&client_id=${UNSPLASH_KEY}`)
+  } catch {
+    // Non-blocking — don't surface errors to the user
   }
 }
 
@@ -274,6 +285,10 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
     link.href = canvas.toDataURL('image/png')
     link.download = `${event.name.replace(/\s+/g, '-')}-social.png`
     link.click()
+    // Required by Unsplash guidelines: trigger download event when photo is used
+    if (unsplashPhoto) {
+      triggerUnsplashDownload(unsplashPhoto.links.download_location)
+    }
   }
 
   // ── Empty / generating states ──
