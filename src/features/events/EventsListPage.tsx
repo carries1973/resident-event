@@ -162,7 +162,9 @@ function EventRow({ event, displayStatus }: EventRowProps) {
         <p className="text-xs text-text-muted truncate">
           {isActive && <span className="text-orange-600 dark:text-orange-400 font-medium">TODAY</span>}
           {isActive && ' · '}
-          {event.date && formatDateShort(event.date)}
+          {event.date
+            ? formatDateShort(event.date)
+            : <span className="italic">No date set</span>}
           {event.startTime && ` · ${formatTime(event.startTime)}`}
           {event.endTime && ` – ${formatTime(event.endTime)}`}
           {event.location && ` · ${event.location}`}

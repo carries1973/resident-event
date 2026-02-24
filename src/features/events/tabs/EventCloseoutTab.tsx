@@ -18,6 +18,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatTime } from '@/lib/utils/dates'
 
 // ---------------------------------------------------------------------------
 // Post-event follow-up checklist items
@@ -122,8 +123,8 @@ export function EventCloseoutTab({ event }: EventCloseoutTabProps) {
         })
       : null
     const timeDisplay = event.startTime && event.endTime
-      ? `${event.startTime} – ${event.endTime}`
-      : event.startTime ?? null
+      ? `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`
+      : event.startTime ? formatTime(event.startTime) : null
     const estimatedAttendance = event.rsvpLimit ?? event.rsvpCount ?? null
 
     return (

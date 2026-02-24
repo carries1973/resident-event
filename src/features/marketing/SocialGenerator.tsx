@@ -9,6 +9,7 @@ import type { EventMarketing } from '@/lib/types/event'
 interface SocialGeneratorProps {
   marketing: EventMarketing
   onRegenerateSection: (section: string) => void
+  buildingName?: string
 }
 
 /**
@@ -18,6 +19,7 @@ interface SocialGeneratorProps {
 export function SocialGenerator({
   marketing,
   onRegenerateSection,
+  buildingName,
 }: SocialGeneratorProps) {
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text)
@@ -51,7 +53,7 @@ export function SocialGenerator({
                   <User className="h-4 w-4 text-text-muted" />
                 </div>
                 <span className="text-xs font-semibold text-text-primary">
-                  Your Building
+                  {buildingName ?? 'Your Building'}
                 </span>
               </div>
 

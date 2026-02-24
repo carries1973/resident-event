@@ -268,6 +268,7 @@ export function EventMarketingTab({ event, onGoToPoster }: EventMarketingTabProp
       <SocialGenerator
         marketing={marketing}
         onRegenerateSection={handleRegenerateSection}
+        buildingName={building?.name}
       />
 
       <Separator />

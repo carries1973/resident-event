@@ -58,12 +58,24 @@ export type PlannerAction =
   | { type: 'GO_TO_STEP'; step: PlannerStep }
   | { type: 'RESET' }
 
+function getDefaultDateRange(): { startDate: string; endDate: string } {
+  // Default to next month so buttons are never disabled on first load
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 2, 0)
+  return {
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+  }
+}
+
 function createInitialState(buildingId: string): PlannerState {
+  const { startDate, endDate } = getDefaultDateRange()
   return {
     step: 'intake',
     buildingId,
-    startDate: '',
-    endDate: '',
+    startDate,
+    endDate,
     personaOverride: '',
     eventCount: 3,
     themes: [],
