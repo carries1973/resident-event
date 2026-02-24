@@ -198,6 +198,29 @@ export const aiMarketingSchema = z
 export type AiMarketingOutput = z.infer<typeof aiMarketingSchema>
 
 // ---------------------------------------------------------------------------
+// 4. AI Day-Of Checklist (Run-of-Show)
+// ---------------------------------------------------------------------------
+
+const aiChecklistItemSchema = z
+  .object({
+    text: z.string().min(1),
+    category: z.enum(['setup', 'during', 'teardown']),
+    dueTime: z.string().optional(),
+    assignedTo: z.string().optional(),
+  })
+  .passthrough()
+
+export const aiDayOfChecklistSchema = z
+  .object({
+    setup: z.array(aiChecklistItemSchema).default([]),
+    during: z.array(aiChecklistItemSchema).default([]),
+    teardown: z.array(aiChecklistItemSchema).default([]),
+  })
+  .passthrough()
+
+export type AiDayOfChecklist = z.infer<typeof aiDayOfChecklistSchema>
+
+// ---------------------------------------------------------------------------
 // Schema for arrays of generated events / ideas
 // ---------------------------------------------------------------------------
 

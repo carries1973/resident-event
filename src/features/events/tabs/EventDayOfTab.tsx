@@ -1,11 +1,17 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useEventStore } from '@/lib/store/eventStore'
+import { useBuildingStore } from '@/lib/store/buildingStore'
 import type { Event } from '@/lib/types/event'
 import type { ChecklistItem, StaffRole } from '@/lib/types/common'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Plus, User, Clock } from 'lucide-react'
+import { Plus, User, Clock, Sparkles, RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
+import { generateAI, AiError } from '@/lib/ai/client'
+import { parseAiResponse, aiDayOfChecklistSchema } from '@/lib/ai/schemas'
+import type { AiDayOfChecklist } from '@/lib/ai/schemas'
 
 type Phase = 'setup' | 'during' | 'teardown'
 
@@ -30,7 +36,6 @@ function getActivePhase(event: Event): Phase {
   const end = new Date(eventDate)
   end.setHours(endH, endM, 0, 0)
 
-  // If it's not even the event date, default to setup
   if (now.toDateString() !== eventDate.toDateString()) {
     return 'setup'
   }
@@ -50,13 +55,71 @@ interface EventDayOfTabProps {
   event: Event
 }
 
+// ---------------------------------------------------------------------------
+// AI prompt builder
+// ---------------------------------------------------------------------------
+
+function buildDayOfPrompt(event: Event, buildingName: string): { system: string; user: string } {
+  const system = `You are an expert residential property event coordinator. Generate a practical, time-stamped run-of-show checklist for a community event. Return ONLY valid JSON — no prose, no markdown fences.`
+
+  const setupMinutes = 30
+
+  let timeContext = ''
+  if (event.startTime && event.endTime) {
+    const [sh, sm] = event.startTime.split(':').map(Number)
+    const setupStart = new Date(0)
+    setupStart.setHours(sh, sm - setupMinutes, 0, 0)
+    const setupHH = String(setupStart.getHours()).padStart(2, '0')
+    const setupMM = String(setupStart.getMinutes()).padStart(2, '0')
+    timeContext = `Setup starts at ${setupHH}:${setupMM}. Event runs ${event.startTime}–${event.endTime}. Teardown follows.`
+  }
+
+  const user = `Generate a run-of-show checklist for this event:
+Event: ${event.name}
+Building: ${buildingName}
+Category: ${event.category || 'Community Event'}
+Date: ${event.date || 'TBD'}
+${event.startTime ? `Start: ${event.startTime}` : ''}
+${event.endTime ? `End: ${event.endTime}` : ''}
+Location: ${event.location || 'TBD'}
+${timeContext}
+Staffing notes: ${event.staffing || 'Standard staffing'}
+Setup supplies: ${event.setupAndSupplies || 'Standard setup'}
+
+Return a JSON object with exactly three keys: "setup", "during", "teardown".
+Each key maps to an array of checklist items.
+
+Each checklist item must have:
+- "text": string — the task description (concise, action-oriented)
+- "category": one of "setup", "during", "teardown"
+- "dueTime": string (HH:mm) — the time this task should be done (optional but preferred)
+- "assignedTo": string — role name like "Property Manager", "Concierge", "Host" (optional)
+
+Guidelines:
+- Setup: 5–8 items covering venue prep 30 min before start (tables, AV, signage, registration desk, supplies, safety check)
+- During: 6–10 items with timestamps covering key moments (welcome, engagement, mid-event check, photo, feedback forms, near-end wrap)
+- Teardown: 4–6 items covering cleanup, lost & found, thank-yous, storage
+- Be specific to the event type and location
+- Use Canadian English
+
+Return ONLY the JSON object.`
+
+  return { system, user }
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 export function EventDayOfTab({ event }: EventDayOfTabProps) {
   const updateEvent = useEventStore((s) => s.updateEvent)
+  const getBuildingById = useBuildingStore((s) => s.getBuildingById)
+  const building = getBuildingById(event.buildingId)
   const checklist = event.dayOfChecklist
   const staffRoles = event.staffRoles
 
-  // Recompute active phase every minute
   const [activePhase, setActivePhase] = useState<Phase>(() => getActivePhase(event))
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
     setActivePhase(getActivePhase(event))
@@ -70,7 +133,6 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
   const total = checklist.length
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
 
-  // Group by category
   const grouped = useMemo(() => ({
     setup: checklist.filter((i) => i.category === 'setup'),
     during: checklist.filter((i) => i.category === 'during'),
@@ -96,14 +158,86 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
     updateEvent(event.id, { dayOfChecklist: [...checklist, newItem] })
   }
 
+  const handleGenerate = useCallback(async (replace = false) => {
+    setIsGenerating(true)
+    try {
+      const buildingName = building?.name ?? 'Your Building'
+      const { system, user } = buildDayOfPrompt(event, buildingName)
+      const result = await generateAI({ systemPrompt: system, userMessage: user })
+      const parsed = parseAiResponse<AiDayOfChecklist>(result.text, aiDayOfChecklistSchema)
+
+      if (!parsed.success) {
+        toast.error('Could not parse the generated checklist. Please try again.')
+        return
+      }
+
+      const data = parsed.data
+      const allGenerated: ChecklistItem[] = [
+        ...data.setup.map((item) => ({
+          id: crypto.randomUUID(),
+          text: item.text,
+          completed: false,
+          category: 'setup' as const,
+          dueTime: item.dueTime,
+          assignedTo: item.assignedTo,
+        })),
+        ...data.during.map((item) => ({
+          id: crypto.randomUUID(),
+          text: item.text,
+          completed: false,
+          category: 'during' as const,
+          dueTime: item.dueTime,
+          assignedTo: item.assignedTo,
+        })),
+        ...data.teardown.map((item) => ({
+          id: crypto.randomUUID(),
+          text: item.text,
+          completed: false,
+          category: 'teardown' as const,
+          dueTime: item.dueTime,
+          assignedTo: item.assignedTo,
+        })),
+      ]
+
+      const newList = replace
+        ? allGenerated
+        : [...checklist, ...allGenerated]
+
+      updateEvent(event.id, { dayOfChecklist: newList })
+      toast.success(`Run-of-Show generated — ${allGenerated.length} tasks added`)
+    } catch (err) {
+      if (err instanceof AiError) {
+        toast.error(err.message)
+      } else {
+        toast.error('Failed to generate checklist. Please try again.')
+      }
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [event, building, checklist, updateEvent])
+
+  // -------------------------------------------------------------------------
+  // Empty state
+  // -------------------------------------------------------------------------
   if (total === 0 && staffRoles.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-text-muted mb-2">No checklist items yet.</p>
-        <p className="text-sm text-text-muted">
-          Checklist items will be auto-populated when you use the AI planner, or you can add them manually below.
+      <div className="text-center py-10">
+        <Clock className="h-10 w-10 text-text-muted mx-auto mb-3" />
+        <p className="text-text-primary font-medium mb-1">No run-of-show yet</p>
+        <p className="text-sm text-text-muted max-w-sm mx-auto mb-6">
+          Generate a time-stamped checklist based on your event details, or add tasks manually below.
         </p>
-        <div className="mt-6 space-y-4">
+
+        <Button
+          onClick={() => handleGenerate(true)}
+          disabled={isGenerating}
+          className="mb-6"
+        >
+          <Sparkles className="mr-2 h-4 w-4" />
+          {isGenerating ? 'Generating…' : 'Generate Run-of-Show'}
+        </Button>
+
+        <div className="mt-4 space-y-4 text-left max-w-md mx-auto">
           {(['setup', 'during', 'teardown'] as const).map((phase) => (
             <div key={phase}>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
@@ -117,19 +251,33 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
     )
   }
 
+  // -------------------------------------------------------------------------
+  // Populated state
+  // -------------------------------------------------------------------------
   return (
     <div className="space-y-6">
-      {/* Active Phase Indicator */}
-      <div className="flex items-center gap-3">
-        <Clock className="h-4 w-4 text-text-muted flex-shrink-0" />
-        <Badge
-          className={cn(
-            'text-sm font-semibold px-3 py-1',
-            PHASE_BADGE_STYLES[activePhase],
-          )}
+      {/* Header row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Clock className="h-4 w-4 text-text-muted flex-shrink-0" />
+          <Badge
+            className={cn(
+              'text-sm font-semibold px-3 py-1',
+              PHASE_BADGE_STYLES[activePhase],
+            )}
+          >
+            Currently: {PHASE_LABELS[activePhase].toUpperCase()}
+          </Badge>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleGenerate(true)}
+          disabled={isGenerating}
         >
-          Currently: {PHASE_LABELS[activePhase].toUpperCase()}
-        </Badge>
+          <RefreshCw className="mr-1.5 h-4 w-4" />
+          {isGenerating ? 'Generating…' : 'Regenerate Run-of-Show'}
+        </Button>
       </div>
 
       {/* Overall Progress */}
@@ -158,7 +306,6 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
                 : 'border-border-default',
             )}
           >
-            {/* Phase Header with mini progress */}
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                 {PHASE_LABELS[phase]}
@@ -175,7 +322,6 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
               )}
             </div>
 
-            {/* Items */}
             {phaseTotal > 0 && (
               <ul className="space-y-1 mb-3">
                 {items.map((item) => (
@@ -188,7 +334,6 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
               </ul>
             )}
 
-            {/* Inline Add Item */}
             <InlineAddItem category={phase} onAdd={addItem} />
           </div>
         )
@@ -251,19 +396,25 @@ function ChecklistRow({
           )}
         </div>
 
-        {/* Text + assigned-to stacked on mobile */}
         <div className="flex-1 min-w-0">
-          <span
-            className={cn(
-              'text-sm block break-words',
-              item.completed ? 'line-through text-text-muted' : 'text-text-primary',
+          <div className="flex items-baseline gap-2 flex-wrap">
+            {item.dueTime && (
+              <span className="text-xs font-mono text-text-muted flex-shrink-0">
+                {item.dueTime}
+              </span>
             )}
-          >
-            {item.text}
-          </span>
+            <span
+              className={cn(
+                'text-sm break-words',
+                item.completed ? 'line-through text-text-muted' : 'text-text-primary',
+              )}
+            >
+              {item.text}
+            </span>
+          </div>
           {item.assignedTo && (
             <span className="text-xs text-text-muted block mt-0.5">
-              Assigned to: {item.assignedTo}
+              {item.assignedTo}
             </span>
           )}
         </div>

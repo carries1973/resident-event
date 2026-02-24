@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
-import { Download, Image } from 'lucide-react'
+import { Download, Image, CalendarHeart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { formatDate, formatTime } from '@/lib/utils/dates'
 import { toast } from 'sonner'
 import type { Event } from '@/lib/types/event'
+import { DEFAULT_OBSERVANCES } from '@/lib/data/observances'
 
 interface EventPosterTabProps {
   event: Event
@@ -27,6 +28,23 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
   const [editingField, setEditingField] = useState<string | null>(null)
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   const [exporting, setExporting] = useState(false)
+  const [showObservance, setShowObservance] = useState(true)
+
+  // Find an observance that falls in the same month as the event
+  const nearbyObservance = useMemo(() => {
+    if (!event.date) return null
+    const d = new Date(event.date + 'T00:00:00')
+    const month = d.getMonth() + 1 // 1-based
+    const day = d.getDate()
+
+    // Look for enabled observances within ±7 days of the event date
+    return DEFAULT_OBSERVANCES.find((obs) => {
+      if (!obs.enabled) return false
+      if (obs.month !== month) return false
+      if (obs.day === undefined) return true // month-long observance always matches
+      return Math.abs(obs.day - day) <= 7
+    }) ?? null
+  }, [event.date])
 
   // Resolved display values (overrides take precedence)
   const displayName = overrides.name ?? event.name
@@ -161,7 +179,7 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
   return (
     <div className="space-y-6">
       {/* Export buttons */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="outline"
           size="sm"
@@ -180,6 +198,20 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
           <Download className="mr-1.5 h-4 w-4" />
           Export as PDF
         </Button>
+        {nearbyObservance && (
+          <button
+            onClick={() => setShowObservance((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              showObservance
+                ? 'border-primary/40 bg-primary/10 text-primary'
+                : 'border-border-default text-text-muted hover:text-text-primary'
+            }`}
+          >
+            <CalendarHeart className="h-3.5 w-3.5" />
+            {nearbyObservance.emoji} {nearbyObservance.name}
+            <span className="ml-1 opacity-60">{showObservance ? '✓' : '+'}</span>
+          </button>
+        )}
         {exporting && (
           <span className="text-sm text-text-muted">Generating export...</span>
         )}
@@ -255,6 +287,14 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
                 onFieldKeyDown={handleFieldKeyDown}
                 className="text-sm text-gray-600 text-center"
               />
+
+              {/* Observance tie-in badge */}
+              {nearbyObservance && showObservance && (
+                <div className="flex items-center justify-center gap-1.5 rounded-full border border-dashed border-gray-300 px-3 py-1">
+                  <span className="text-sm">{nearbyObservance.emoji}</span>
+                  <span className="text-xs text-gray-500">{nearbyObservance.name}</span>
+                </div>
+              )}
 
               {/* Description (short, non-editable) */}
               {event.description && (
