@@ -1,4 +1,5 @@
 import type { Event } from '@/lib/types/event'
+import type { LocalEvent } from '@/lib/types/localEvent'
 import type { Observance } from '@/lib/types/observance'
 import type { EventStatus, ObservanceType } from '@/lib/types/common'
 import { computeEventStatus } from '@/lib/store/eventStore'
@@ -38,6 +39,7 @@ interface CalendarCellProps {
   month: number
   year: number
   events: Event[]
+  localEvents: LocalEvent[]
   observances: Observance[]
   isToday: boolean
   onClick: () => void
@@ -47,12 +49,14 @@ interface CalendarCellProps {
  * CalendarCell — renders a single day cell in the calendar grid.
  * Shows the day number, up to 2 events (truncated), overflow indicator,
  * and observance emojis. Events are colour-coded by status with small dots.
+ * Local (community) events are shown in amber beneath in-building events.
  */
 export function CalendarCell({
   day,
   month,
   year,
   events,
+  localEvents,
   observances,
   isToday: today,
   onClick,
@@ -63,9 +67,15 @@ export function CalendarCell({
     )
   }
 
+  // Combined slot budget: show up to 2 total items (in-building first, then local)
+  // to keep cells readable. Overflow shown as "+N more".
   const maxVisible = 2
   const visibleEvents = events.slice(0, maxVisible)
-  const overflowCount = events.length - maxVisible
+  const remainingSlots = maxVisible - visibleEvents.length
+  const visibleLocalEvents = localEvents.slice(0, remainingSlots)
+  const overflowCount =
+    (events.length - visibleEvents.length) +
+    (localEvents.length - visibleLocalEvents.length)
 
   return (
     <button
@@ -120,7 +130,7 @@ export function CalendarCell({
         </div>
       )}
 
-      {/* Events */}
+      {/* In-building events */}
       <div className="flex-1 flex flex-col gap-0.5 mt-0.5">
         {visibleEvents.map((event) => {
           const status = computeEventStatus(event)
@@ -148,6 +158,21 @@ export function CalendarCell({
             </div>
           )
         })}
+
+        {/* Local (community) events — amber */}
+        {visibleLocalEvents.map((localEvent) => (
+          <div
+            key={localEvent.id}
+            className="flex items-center gap-1 min-w-0 rounded px-1"
+            title={`Community: ${localEvent.name}`}
+          >
+            <span className="h-1.5 w-1.5 rounded-full shrink-0 bg-amber-500 print:hidden" />
+            <span className="text-[11px] sm:text-xs leading-4 truncate text-amber-700 dark:text-amber-400 print:text-black">
+              {localEvent.name}
+            </span>
+          </div>
+        ))}
+
         {overflowCount > 0 && (
           <span className="text-[11px] leading-4 text-text-muted italic print:text-black">
             +{overflowCount} more

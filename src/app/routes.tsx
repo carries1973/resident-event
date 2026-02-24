@@ -23,6 +23,9 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 // Observances (real)
 import { ObservancesPage } from '@/features/observances/ObservancesPage'
 
+// Local Events (real)
+import { LocalEventsPage } from '@/features/localEvents/LocalEventsPage'
+
 // Settings (real)
 import { DataBackupPage } from '@/features/settings/DataBackupPage'
 import { PropertyProfilePage } from '@/features/settings/PropertyProfilePage'
@@ -81,6 +84,7 @@ export function AppRoutes() {
         <Route path="/events/:id/edit" element={<EventFormPage />} />
 
         <Route path="/observances" element={<ObservancesPage />} />
+        <Route path="/local-events" element={<LocalEventsPage />} />
 
         <Route path="/assets/packages" element={<EventPackagesPage />} />
         <Route path="/assets/library" element={<ResourceLibraryPage />} />

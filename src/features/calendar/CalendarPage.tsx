@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, SlidersHorizontal, ArrowRight } from 'lucide-react'
 import { useAppStore } from '@/lib/store/appStore'
 import { useEventStore, computeEventStatus } from '@/lib/store/eventStore'
+import { useLocalEventStore } from '@/lib/store/localEventStore'
 import { getMonthName } from '@/lib/utils/dates'
 import { DEFAULT_OBSERVANCES } from '@/lib/data/observances'
 import { Button } from '@/components/ui/button'
@@ -11,6 +12,7 @@ import { CalendarGrid } from '@/features/calendar/CalendarGrid'
 import { CalendarDayDrawer } from '@/features/calendar/CalendarDayDrawer'
 import { CalendarExport } from '@/features/calendar/CalendarExport'
 import type { Event } from '@/lib/types/event'
+import type { LocalEvent } from '@/lib/types/localEvent'
 import type { Observance } from '@/lib/types/observance'
 
 /**
@@ -25,6 +27,7 @@ export function CalendarPage() {
   const prevMonth = useAppStore((s) => s.prevMonth)
   const disabledObservanceIds = useAppStore((s) => s.disabledObservanceIds)
   const events = useEventStore((s) => s.events)
+  const localEvents = useLocalEventStore((s) => s.localEvents)
 
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -115,6 +118,12 @@ export function CalendarPage() {
       return true
     })
   }, [events, selectedDateISO, statusFilters, buildingFilter])
+
+  // Local (community) events for the selected day
+  const selectedDayLocalEvents = useMemo((): LocalEvent[] => {
+    if (!selectedDateISO) return []
+    return localEvents.filter((e: LocalEvent) => e.date === selectedDateISO)
+  }, [localEvents, selectedDateISO])
 
   // Observances for the selected day (shown in the day drawer).
   // Themes are internal planning context — excluded from resident-facing views.
@@ -256,6 +265,7 @@ export function CalendarPage() {
         onOpenChange={setDrawerOpen}
         date={selectedDateISO}
         events={selectedDayEvents}
+        localEvents={selectedDayLocalEvents}
         observances={selectedDayObservances}
       />
     </div>

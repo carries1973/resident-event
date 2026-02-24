@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useEventStore, useEventStoreHydrated } from '@/lib/store/eventStore'
-import { useBuildingStore } from '@/lib/store/buildingStore'
+import { useBuildingStore, useBuildingStoreHydrated } from '@/lib/store/buildingStore'
 import { useAppStore } from '@/lib/store/appStore'
 import { createDefaultEvent, type Event } from '@/lib/types/event'
 import type { RecurrenceType } from '@/lib/types/common'
@@ -87,6 +87,7 @@ export function EventFormPage() {
   const isEditing = Boolean(id)
 
   const hasHydrated = useEventStoreHydrated()
+  const buildingsHydrated = useBuildingStoreHydrated()
   const existingEvent = useEventStore((s) =>
     id ? s.events.find((e) => e.id === id) : undefined,
   )
@@ -100,12 +101,24 @@ export function EventFormPage() {
       ? { ...existingEvent }
       : createDefaultEvent({
           name: '',
-          buildingId: currentBuildingId ?? buildings[0]?.id ?? '',
+          buildingId: '',  // resolved after hydration via useEffect below
         }),
   )
   const [isDirty, setIsDirty] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+
+  // Resolve buildingId once stores have finished rehydrating from localStorage.
+  // Without this, currentBuildingId and buildings are empty on fresh page load.
+  useEffect(() => {
+    if (!buildingsHydrated) return
+    if (isEditing) return  // editing mode: form already pre-filled from existingEvent
+    if (form.buildingId) return  // user already selected something
+    const resolved = currentBuildingId ?? buildings[0]?.id ?? ''
+    if (resolved) {
+      setForm((prev) => ({ ...prev, buildingId: resolved }))
+    }
+  }, [buildingsHydrated, isEditing, form.buildingId, currentBuildingId, buildings])
 
   useEffect(() => {
     if (existingEvent) {

@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
 import { useAppStore } from '@/lib/store/appStore'
 import { useEventStore, computeEventStatus } from '@/lib/store/eventStore'
+import { useLocalEventStore } from '@/lib/store/localEventStore'
 import { generateCalendarGrid, getShortDayNames } from '@/lib/utils/dates'
 import { DEFAULT_OBSERVANCES } from '@/lib/data/observances'
 import { CalendarCell } from '@/features/calendar/CalendarCell'
 import type { Event } from '@/lib/types/event'
+import type { LocalEvent } from '@/lib/types/localEvent'
 import type { Observance } from '@/lib/types/observance'
 
 /**
@@ -12,6 +14,7 @@ import type { Observance } from '@/lib/types/observance'
  * Reads the current month/year and filter state from useAppStore.
  * Filters events by status and building, filters observances by
  * disabled IDs and type filters, then distributes them across days.
+ * Local (community) events are also shown per day in amber.
  */
 export function CalendarGrid({
   onDayClick,
@@ -21,6 +24,7 @@ export function CalendarGrid({
   const calendar = useAppStore((s) => s.calendar)
   const disabledObservanceIds = useAppStore((s) => s.disabledObservanceIds)
   const events = useEventStore((s) => s.events)
+  const localEvents = useLocalEventStore((s) => s.localEvents)
 
   const { year, month, statusFilters, buildingFilter, observanceTypeFilters } =
     calendar
@@ -32,7 +36,7 @@ export function CalendarGrid({
 
   const dayNames = getShortDayNames()
 
-  // Filter events for this month
+  // Filter in-building events for this month
   const monthEvents = useMemo(() => {
     const monthStr = String(month).padStart(2, '0')
     const prefix = `${year}-${monthStr}`
@@ -54,7 +58,14 @@ export function CalendarGrid({
     })
   }, [events, year, month, statusFilters, buildingFilter])
 
-  // Index events by day number for fast lookup
+  // Filter local (community) events for this month
+  const monthLocalEvents = useMemo(() => {
+    const monthStr = String(month).padStart(2, '0')
+    const prefix = `${year}-${monthStr}`
+    return localEvents.filter((e: LocalEvent) => e.date.startsWith(prefix))
+  }, [localEvents, year, month])
+
+  // Index in-building events by day number for fast lookup
   const eventsByDay = useMemo(() => {
     const map = new Map<number, Event[]>()
     for (const event of monthEvents) {
@@ -65,6 +76,18 @@ export function CalendarGrid({
     }
     return map
   }, [monthEvents])
+
+  // Index local events by day number
+  const localEventsByDay = useMemo(() => {
+    const map = new Map<number, LocalEvent[]>()
+    for (const event of monthLocalEvents) {
+      const dayNum = parseInt(event.date.split('-')[2], 10)
+      const existing = map.get(dayNum) ?? []
+      existing.push(event)
+      map.set(dayNum, existing)
+    }
+    return map
+  }, [monthLocalEvents])
 
   // Filter observances for this month.
   // Themes are internal planning context — excluded from the calendar grid.
@@ -145,6 +168,7 @@ export function CalendarGrid({
               month={month}
               year={year}
               events={day != null ? eventsByDay.get(day) ?? [] : []}
+              localEvents={day != null ? localEventsByDay.get(day) ?? [] : []}
               observances={day != null ? getObservancesForDay(day) : []}
               isToday={isTodayInMonth && day === todayDay}
               onClick={() => {

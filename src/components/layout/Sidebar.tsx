@@ -11,6 +11,7 @@ import {
   ImageIcon,
   UserCog,
   MessageSquare,
+  MapPin,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store/appStore'
@@ -41,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Buildings', to: '/buildings', icon: <Building2 className="h-4 w-4" /> },
       { label: 'Events', to: '/events', icon: <Calendar className="h-4 w-4" /> },
       { label: 'Observances', to: '/observances', icon: <Heart className="h-4 w-4" /> },
+      { label: 'Local Events', to: '/local-events', icon: <MapPin className="h-4 w-4" /> },
     ],
   },
   {
