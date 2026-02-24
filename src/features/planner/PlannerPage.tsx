@@ -42,6 +42,16 @@ export function PlannerPage() {
   // Full plan wizard state
   const [planState, planDispatch] = usePlannerState(selectedBuildingId)
 
+  // Listen for the "Try Full Plan →" banner click in QuickIdeas
+  useEffect(() => {
+    function handleSwitchMode(e: Event) {
+      const detail = (e as CustomEvent<string>).detail
+      if (detail === 'full') setMode('full')
+    }
+    document.addEventListener('planner:switch-mode', handleSwitchMode)
+    return () => document.removeEventListener('planner:switch-mode', handleSwitchMode)
+  }, [])
+
   // Auto-select when currentBuildingId changes or on first load
   useEffect(() => {
     if (currentBuildingId && buildings.some((b) => b.id === currentBuildingId)) {
@@ -308,12 +318,18 @@ export function PlannerPage() {
       {/* Mode toggle + content */}
       {selectedBuilding ? (
         <Tabs value={mode} onValueChange={setMode}>
-          <TabsList>
-            <TabsTrigger value="quick">
+          <TabsList className="h-10 gap-1 bg-surface border border-border-default p-1">
+            <TabsTrigger
+              value="quick"
+              className="data-[state=active]:bg-accent-primary data-[state=active]:text-white data-[state=active]:shadow-sm gap-1.5"
+            >
               <Lightbulb className="h-4 w-4" />
               Quick Ideas
             </TabsTrigger>
-            <TabsTrigger value="full">
+            <TabsTrigger
+              value="full"
+              className="data-[state=active]:bg-accent-primary data-[state=active]:text-white data-[state=active]:shadow-sm gap-1.5"
+            >
               <CalendarRange className="h-4 w-4" />
               Full Plan
             </TabsTrigger>

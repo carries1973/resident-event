@@ -191,7 +191,9 @@ export function DashboardPage() {
                 <p className="text-xs text-text-muted uppercase tracking-wider">
                   {metricsThisMonth.planned > 0
                     ? `Events — ${monthName}`
-                    : 'Upcoming Events'}
+                    : totalUpcoming > 0
+                      ? 'Upcoming Events'
+                      : `Events — ${monthName}`}
                 </p>
                 <p className="text-3xl font-bold text-text-primary">
                   {metricsThisMonth.planned > 0 ? metricsThisMonth.planned : totalUpcoming}
@@ -214,7 +216,7 @@ export function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-text-muted uppercase tracking-wider">
-                  Events Completed — {monthName}
+                  Completed — {monthName}
                 </p>
                 <p className="text-3xl font-bold text-text-primary">{metricsThisMonth.completed}</p>
               </div>

@@ -169,40 +169,45 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
     })
   }
 
-  // Building summary for item 7
-  const amenitySummary = [
-    ...(building.amenities ?? []),
-    ...(building.customAmenities ?? []),
-  ].slice(0, 4).join(' · ')
-
-  const hasAmenities = (building.amenities?.length ?? 0) > 0 || (building.customAmenities?.length ?? 0) > 0
+  // Building amenity summary — collapsible if >4 items
+  const allAmenities = [...(building.amenities ?? []), ...(building.customAmenities ?? [])]
+  const hasAmenities = allAmenities.length > 0
+  const [amenitiesExpanded, setAmenitiesExpanded] = useState(false)
+  const visibleAmenities = amenitiesExpanded ? allAmenities : allAmenities.slice(0, 4)
+  const hiddenAmenityCount = allAmenities.length - 4
 
   return (
     <div className="space-y-6 mt-4">
-      {/* Explainer — only shown when no sessions yet (item 6) */}
-      {sessions.length === 0 && (
-        <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3 text-sm text-text-secondary space-y-1">
-          <p className="font-medium text-text-primary">Getting started</p>
-          <p>Select your building, describe the type of event you want, and hit <span className="font-medium text-text-primary">Generate Ideas</span> — or use <span className="font-medium text-text-primary">Surprise Me</span> for a random mix.</p>
-          <p>Select a concept to save it or build a full event plan.</p>
-        </div>
-      )}
-
-      {/* Building data summary (item 7) */}
+      {/* Building data summary with expandable amenities */}
       <div className="flex items-start gap-2 text-sm">
         <Building2 className="h-4 w-4 text-text-muted mt-0.5 shrink-0" />
         {hasAmenities ? (
           <p className="text-text-muted">
-            {amenitySummary}
-            {(building.amenities?.length ?? 0) + (building.customAmenities?.length ?? 0) > 4 && (
-              <span> · +{(building.amenities?.length ?? 0) + (building.customAmenities?.length ?? 0) - 4} more</span>
+            {visibleAmenities.join(' · ')}
+            {!amenitiesExpanded && hiddenAmenityCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setAmenitiesExpanded(true)}
+                className="ml-1 text-accent-primary hover:underline text-xs font-medium"
+              >
+                +{hiddenAmenityCount} more
+              </button>
+            )}
+            {amenitiesExpanded && hiddenAmenityCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setAmenitiesExpanded(false)}
+                className="ml-1 text-accent-primary hover:underline text-xs font-medium"
+              >
+                Show less
+              </button>
             )}
             {building.unitCount && <span> · {building.unitCount} units</span>}
           </p>
         ) : (
           <p className="text-text-muted">
             No amenities added for this building.{' '}
-            <a href="/buildings" className="text-primary underline underline-offset-2">
+            <a href="/buildings" className="text-accent-primary underline underline-offset-2">
               Add them in Buildings
             </a>{' '}
             for more tailored ideas.
@@ -224,25 +229,52 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
           rows={2}
           disabled={loading}
         />
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => generate()}
-            disabled={loading || !topic.trim()}
-          >
-            <Sparkles className="h-4 w-4" />
-            Generate Ideas
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => generate('surprise me')}
-            disabled={loading}
-            title="Let the AI choose a theme based on your building and the current season"
-          >
-            <Shuffle className="h-4 w-4" />
-            Surprise Me
-          </Button>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => generate()}
+              disabled={loading || !topic.trim()}
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate Ideas
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => generate('surprise me')}
+              disabled={loading}
+            >
+              <Shuffle className="h-4 w-4" />
+              Surprise Me
+            </Button>
+          </div>
+          {/* Visible explanation of Surprise Me */}
+          <p className="text-xs text-text-muted">
+            <span className="font-medium text-text-secondary">Surprise Me</span> — lets the AI pick a theme based on your building profile and the current season. No topic needed.
+          </p>
         </div>
       </div>
+
+      {/* Full Plan upsell — shown when there's no topic yet so it's discoverable */}
+      {!topic.trim() && !loading && ideas.length === 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-accent-primary/20 bg-accent-primary/5 px-4 py-3 gap-3">
+          <div className="text-sm">
+            <p className="font-medium text-accent-primary">Need a full event plan?</p>
+            <p className="text-text-muted text-xs mt-0.5">
+              Full Plan generates complete events with dates, budget, logistics, and marketing — not just ideas.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              // Find the parent Tabs and switch to 'full' — bubble up via custom event
+              document.dispatchEvent(new CustomEvent('planner:switch-mode', { detail: 'full' }))
+            }}
+            className="shrink-0 rounded-md border border-accent-primary px-3 py-1.5 text-xs font-medium text-accent-primary hover:bg-accent-primary/10 transition-colors"
+          >
+            Try Full Plan →
+          </button>
+        </div>
+      )}
 
       {/* Loading state */}
       {loading && (
@@ -358,7 +390,9 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
                     {expandedSessionId !== session.id && session.ideas.length > 0 && (
                       <p className="text-xs text-text-muted mt-0.5 truncate">
                         {session.ideas.slice(0, 3).map((i) => i.name).join(' · ')}
-                        {session.ideas.length > 3 && ` · +${session.ideas.length - 3} more`}
+                        {session.ideas.length > 3 && (
+                          <span className="text-accent-primary font-medium"> · +{session.ideas.length - 3} more ↓</span>
+                        )}
                       </p>
                     )}
                   </button>

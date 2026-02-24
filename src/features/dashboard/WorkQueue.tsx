@@ -141,11 +141,13 @@ export function WorkQueue() {
                     </p>
                     <p className="truncate text-xs text-text-muted">
                       {item.buildingName}
-                      {item.event.date && (
+                      {item.event.date ? (
                         <span className="ml-1">
                           &middot; {formatDateShort(item.event.date)}
                         </span>
-                      )}
+                      ) : item.type === 'schedule' ? (
+                        <span className="ml-1 italic">&middot; No date set</span>
+                      ) : null}
                     </p>
                     {/* Show missing fields for draft events */}
                     {item.type === 'schedule' && (() => {
