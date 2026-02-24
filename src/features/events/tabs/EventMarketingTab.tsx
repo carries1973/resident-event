@@ -12,6 +12,7 @@ import { buildMarketingPrompt } from '@/lib/ai/prompts/marketing'
 import { useEventStore } from '@/lib/store/eventStore'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import type { Event, EventMarketing } from '@/lib/types/event'
+import { fillMarketingPlaceholders } from '@/lib/utils/marketing'
 
 import { MarketingGenerating } from '@/features/marketing/MarketingGenerating'
 import { EmailGenerator } from '@/features/marketing/EmailGenerator'
@@ -186,7 +187,15 @@ export function EventMarketingTab({ event, onGoToPoster }: EventMarketingTabProp
   // -----------------------------------------------------------------------
   // Render: marketing data populated
   // -----------------------------------------------------------------------
-  const marketing = event.marketing
+  // Apply placeholder replacement so any stray {BUILDING_NAME}, {RSVP_LINK},
+  // {DATE}, {TIME} etc. in existing or AI-generated content are resolved
+  // before display. The AI prompt instructs it to use real values, but this
+  // is a safety net for previously-generated content.
+  const marketing = fillMarketingPlaceholders(
+    event.marketing,
+    event,
+    building.name,
+  ) as EventMarketing
 
   return (
     <div className="space-y-8">

@@ -33,7 +33,7 @@ import { parseAiResponse, aiMarketingSchema } from '@/lib/ai/schemas'
 import type { AiMarketingOutput } from '@/lib/ai/schemas'
 import { buildMarketingPrompt } from '@/lib/ai/prompts/marketing'
 import type { Event, EventMarketing } from '@/lib/types/event'
-import { formatDate, formatTime } from '@/lib/utils/dates'
+import { fillPlaceholders } from '@/lib/utils/marketing'
 import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
 // ---------------------------------------------------------------------------
@@ -71,35 +71,6 @@ async function triggerUnsplashDownload(downloadLocation: string): Promise<void> 
   } catch {
     // Non-blocking — don't surface errors to the user
   }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Replace any placeholder tokens the AI may have left in the copy with real
- * values. This is a safety net — the AI prompt tells it to use real values,
- * but this ensures any stray tokens in previously-generated or edge-case
- * content are still resolved before display and copy-paste.
- */
-function fillPlaceholders(text: string, event: Event, buildingName: string): string {
-  const timeStr =
-    event.startTime && event.endTime
-      ? `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`
-      : event.startTime
-        ? formatTime(event.startTime)
-        : 'TBD'
-
-  return text
-    .replace(/\{BUILDING_NAME\}/gi, buildingName)
-    .replace(/\{EVENT_NAME\}/gi, event.name)
-    .replace(/\{DATE\}/gi, event.date ? formatDate(event.date) : 'TBD')
-    .replace(/\{TIME\}/gi, timeStr)
-    .replace(/\{RESIDENT_NAME\}/gi, 'Neighbour')
-    .replace(/\{RSVP_LINK\}/gi, '[RSVP link — insert your link here]')
-    .replace(/\{QR_CODE\}/gi, '[QR code]')
-    .replace(/\{BUILDING_LOGO\}/gi, '[building logo]')
 }
 
 // ---------------------------------------------------------------------------

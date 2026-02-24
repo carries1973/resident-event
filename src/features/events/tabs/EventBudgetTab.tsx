@@ -116,10 +116,11 @@ export function EventBudgetTab({ event }: EventBudgetTabProps) {
           <p className="text-xs text-text-muted font-medium">Actual</p>
           <p className="text-lg font-semibold text-text-primary mt-0.5">${totalActual.toFixed(2)}</p>
         </div>
-        <div className={cn('rounded-lg border p-3', overBudget ? 'border-danger/30 bg-danger/5' : 'border-success/30 bg-success/5')}>
+        <div className={cn('rounded-lg border p-3', overBudget ? 'border-danger/30 bg-danger/5' : diff < 0 ? 'border-success/30 bg-success/5' : 'border-border-default')}>
           <p className="text-xs text-text-muted font-medium">Variance</p>
           <div className={cn('flex items-center gap-1 mt-0.5', overBudget ? 'text-danger' : diff < 0 ? 'text-success' : 'text-text-muted')}>
-            {overBudget ? <TrendingUp className="h-4 w-4" /> : diff < 0 ? <TrendingDown className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+            {overBudget && <TrendingUp className="h-4 w-4" />}
+            {diff < 0 && !overBudget && <TrendingDown className="h-4 w-4" />}
             <span className="text-lg font-semibold">
               {diff === 0 ? '$0.00' : `${overBudget ? '+' : '-'}$${Math.abs(diff).toFixed(2)}`}
             </span>

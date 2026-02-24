@@ -16,10 +16,25 @@ interface QuickIdeaCardProps {
 
 export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }: QuickIdeaCardProps) {
   const createEvent = useEventStore((s) => s.createEvent)
-  const [saved, setSaved] = useState(false)
+  const events = useEventStore((s) => s.events)
+
+  // Initialise from store so resuming a session doesn't re-show the Save button
+  // for ideas that were already saved in a previous page load.
+  const alreadySaved = events.some(
+    (e) => e.name === idea.name && e.buildingId === building.id && e.source === 'brainstorm',
+  )
+  const [saved, setSaved] = useState(alreadySaved)
 
   const handleSaveAsDraft = () => {
     if (saved) return
+    // Guard against double-save (e.g. rapid double-click)
+    const duplicate = events.some(
+      (e) => e.name === idea.name && e.buildingId === building.id && e.source === 'brainstorm',
+    )
+    if (duplicate) {
+      setSaved(true)
+      return
+    }
     createEvent({
       name: idea.name,
       buildingId: building.id,

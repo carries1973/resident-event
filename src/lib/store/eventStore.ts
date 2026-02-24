@@ -48,10 +48,13 @@ export function computeEventStatus(event: Event): EventStatus {
     }
   }
 
-  // Guard active events: if the event date is in the future the status
-  // should display as scheduled (prevents a manually-set or stale 'active'
-  // from showing "Happening Now" for a future event).
-  if (status === 'active' && date) {
+  // Guard active events: if the event date is in the future (or missing) the
+  // status should display as scheduled (prevents a manually-set or stale
+  // 'active' from showing "Happening Now" for a future or dateless event).
+  if (status === 'active') {
+    // No date set — cannot be "active", show as scheduled
+    if (!date) return 'scheduled'
+
     const now = new Date()
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)

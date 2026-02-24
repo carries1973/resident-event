@@ -7,7 +7,7 @@
 
 import type { Dispatch } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, Zap } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Check, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -203,13 +203,18 @@ export function PlannerIntake({
                   key={persona.id}
                   type="button"
                   onClick={() => handlePersonaChange(persona.id)}
-                  className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                  className={`relative rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
                     isActive
                       ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
                       : 'border-border-default text-text-secondary hover:border-accent-primary/50 hover:text-text-primary'
                   }`}
                 >
-                  <p className="font-medium truncate">{persona.label}</p>
+                  {isActive && (
+                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-primary">
+                      <Check className="h-2.5 w-2.5 text-white" />
+                    </span>
+                  )}
+                  <p className="font-medium truncate pr-5">{persona.label}</p>
                   <p className="text-text-muted mt-0.5 truncate">{persona.ageRange}</p>
                 </button>
               )

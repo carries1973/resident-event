@@ -136,7 +136,7 @@ export function WorkQueue() {
                   role="listitem"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-text-primary">
+                    <p className="truncate text-sm font-medium text-text-primary" title={item.event.name}>
                       {item.event.name}
                     </p>
                     <p className="truncate text-xs text-text-muted">
