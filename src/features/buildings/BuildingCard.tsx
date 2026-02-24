@@ -101,13 +101,34 @@ export function BuildingCard({ building, onDuplicate, onDelete }: BuildingCardPr
           {building.unitCount != null && building.unitCount > 0 && (
             <span>{building.unitCount} units</span>
           )}
-          {(building.amenities?.length ?? 0) > 0 && (
-            <span>{building.amenities.length} amenities</span>
-          )}
           {building.primaryResidentGroup && (
-            <span>{building.primaryResidentGroup}</span>
+            <span className="capitalize">{building.primaryResidentGroup.replace(/_/g, ' ')}</span>
           )}
         </div>
+
+        {/* Amenity pills */}
+        {(building.amenities?.length ?? 0) > 0 && (() => {
+          const all = [...building.amenities, ...(building.customAmenities ?? [])]
+          const visible = all.slice(0, 5)
+          const overflow = all.length - visible.length
+          return (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {visible.map((a) => (
+                <span
+                  key={a}
+                  className="inline-flex items-center rounded-full bg-page border border-border-default px-2 py-0.5 text-[10px] text-text-muted"
+                >
+                  {a}
+                </span>
+              ))}
+              {overflow > 0 && (
+                <span className="inline-flex items-center rounded-full bg-page border border-border-default px-2 py-0.5 text-[10px] text-text-muted">
+                  +{overflow} more
+                </span>
+              )}
+            </div>
+          )
+        })()}
       </CardContent>
     </Card>
   )

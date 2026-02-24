@@ -318,6 +318,34 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
         </section>
       )}
 
+      {/* Building amenities — useful reference when planning event details */}
+      {building && (building.amenities?.length > 0 || building.customAmenities?.length > 0) && (
+        <section>
+          <h3 className="text-sm font-semibold text-text-primary mb-2">
+            Available amenities at {building.name}
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {[...(building.amenities ?? []), ...(building.customAmenities ?? [])].map((a) => (
+              <span
+                key={a}
+                className={
+                  event.location && event.location.toLowerCase().includes(a.toLowerCase())
+                    ? 'inline-flex items-center rounded-full bg-accent-primary/10 border border-accent-primary/30 px-2.5 py-0.5 text-xs text-accent-primary font-medium'
+                    : 'inline-flex items-center rounded-full bg-page border border-border-default px-2.5 py-0.5 text-xs text-text-secondary'
+                }
+              >
+                {a}
+              </span>
+            ))}
+          </div>
+          {event.location && (
+            <p className="text-xs text-text-muted mt-2">
+              Highlighted amenity matches the event location.
+            </p>
+          )}
+        </section>
+      )}
+
       {/* Measurement plan */}
       {event.measurementPlan && (
         <section>
