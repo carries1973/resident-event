@@ -33,23 +33,26 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
   const [date, setDate] = useState(event.date ?? '')
   const [startTime, setStartTime] = useState(event.startTime ?? '')
   const [endTime, setEndTime] = useState(event.endTime ?? '')
+  const [location, setLocation] = useState(event.location ?? '')
 
   // Keep local state in sync if event updates externally
   useEffect(() => {
     setDate(event.date ?? '')
     setStartTime(event.startTime ?? '')
     setEndTime(event.endTime ?? '')
-  }, [event.date, event.startTime, event.endTime])
+    setLocation(event.location ?? '')
+  }, [event.date, event.startTime, event.endTime, event.location])
 
-  const hasSchedule = !!(event.date && event.startTime && event.endTime)
-  const missingSchedule = !event.date || !event.startTime || !event.endTime
+  const hasSchedule = !!(event.date && event.startTime && event.endTime && event.location)
+  const missingSchedule = !event.date || !event.startTime || !event.endTime || !event.location
 
   function handleSaveSchedule() {
     if (!date) { toast.error('Date is required.'); return }
     if (!startTime) { toast.error('Start time is required.'); return }
     if (!endTime) { toast.error('End time is required.'); return }
     if (startTime >= endTime) { toast.error('End time must be after start time.'); return }
-    updateEvent(event.id, { date, startTime, endTime })
+    if (!location.trim()) { toast.error('Location is required.'); return }
+    updateEvent(event.id, { date, startTime, endTime, location: location.trim() })
     toast.success('Schedule saved.')
     setEditing(false)
   }
@@ -58,6 +61,7 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
     setDate(event.date ?? '')
     setStartTime(event.startTime ?? '')
     setEndTime(event.endTime ?? '')
+    setLocation(event.location ?? '')
     setEditing(false)
   }
 
@@ -92,7 +96,7 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="text-xs text-text-muted font-medium" htmlFor="ov-date">Date</label>
+                <label className="text-xs text-text-muted font-medium" htmlFor="ov-date">Date <span className="text-danger">*</span></label>
                 <input
                   id="ov-date"
                   type="date"
@@ -102,7 +106,7 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-text-muted font-medium" htmlFor="ov-start">Start time</label>
+                <label className="text-xs text-text-muted font-medium" htmlFor="ov-start">Start time <span className="text-danger">*</span></label>
                 <input
                   id="ov-start"
                   type="time"
@@ -112,7 +116,7 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-text-muted font-medium" htmlFor="ov-end">End time</label>
+                <label className="text-xs text-text-muted font-medium" htmlFor="ov-end">End time <span className="text-danger">*</span></label>
                 <input
                   id="ov-end"
                   type="time"
@@ -121,6 +125,19 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
                   className="w-full rounded-md border border-border-default bg-page px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-text-muted font-medium" htmlFor="ov-location">
+                Location <span className="text-danger">*</span>
+              </label>
+              <input
+                id="ov-location"
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Rooftop Patio, Resident Lounge"
+                className="w-full rounded-md border border-border-default bg-page px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
             </div>
             {duration && (
               <p className="text-xs text-text-muted">Duration: {duration}</p>
@@ -138,23 +155,41 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
           </div>
         ) : hasSchedule ? (
           /* Scheduled display */
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <span className="text-text-primary font-medium">{formatDate(event.date)}</span>
-            <span className="text-text-secondary">
-              {formatTime(event.startTime)} – {formatTime(event.endTime)}
-            </span>
-            {duration && (
-              <span className="text-xs text-text-muted bg-page px-2 py-0.5 rounded-full">{duration}</span>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <span className="text-text-primary font-medium">{formatDate(event.date)}</span>
+              <span className="text-text-secondary">
+                {formatTime(event.startTime)} – {formatTime(event.endTime)}
+              </span>
+              {duration && (
+                <span className="text-xs text-text-muted bg-page px-2 py-0.5 rounded-full">{duration}</span>
+              )}
+            </div>
+            {event.location && (
+              <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+                <MapPin className="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
+                {event.location}
+              </div>
             )}
           </div>
         ) : (
           /* Missing schedule nudge */
-          <p className="text-sm text-text-muted">
-            No date or time set yet.{' '}
-            <span className="text-warning font-medium">
-              Date and time are required to schedule this event.
-            </span>
-          </p>
+          <div className="space-y-1.5">
+            <p className="text-sm text-text-muted">
+              No schedule set yet.{' '}
+              <span className="text-warning font-medium">
+                Date, time, and location are required to schedule this event.
+              </span>
+            </p>
+            {/* Show partial info if some fields exist */}
+            {(event.date || event.startTime || event.location) && (
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-text-muted">
+                {event.date && <span>📅 {formatDate(event.date)}</span>}
+                {event.startTime && event.endTime && <span>🕐 {formatTime(event.startTime)} – {formatTime(event.endTime)}</span>}
+                {event.location && <span>📍 {event.location}</span>}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Schedule missing warning (when not editing) */}
