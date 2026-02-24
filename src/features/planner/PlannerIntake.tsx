@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
 // Full Plan Wizard — Step 1: Intake
 // ---------------------------------------------------------------------------
-// Collects the date range for event generation. The building is already
-// selected via the parent PlannerPage building selector.
+// Collects the date range + target persona for event generation.
+// The building is already selected via the parent PlannerPage selector.
 // ---------------------------------------------------------------------------
 
 import type { Dispatch } from 'react'
@@ -14,6 +14,25 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import type { Building } from '@/lib/types/building'
 import type { PlannerState, PlannerAction } from './usePlannerState'
+import { RESIDENT_OPTIONS } from '@/lib/data/residentTypes'
+
+// Quick month-range presets — fills startDate/endDate automatically
+const MONTH_PRESETS = [
+  { label: 'This month', getRange: () => getMonthRange(0) },
+  { label: 'Next month', getRange: () => getMonthRange(1) },
+  { label: 'Next 3 months', getRange: () => getMonthRange(0, 3) },
+  { label: 'Next 6 months', getRange: () => getMonthRange(0, 6) },
+]
+
+function getMonthRange(offsetMonths: number, spanMonths = 1): { start: string; end: string } {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + offsetMonths + spanMonths, 0)
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  }
+}
 
 interface PlannerIntakeProps {
   building: Building
@@ -35,12 +54,23 @@ export function PlannerIntake({
 
   const canProceed = state.startDate !== '' && state.endDate !== ''
 
+  function handlePreset(preset: (typeof MONTH_PRESETS)[number]) {
+    const { start, end } = preset.getRange()
+    dispatch({ type: 'SET_DATES', startDate: start, endDate: end })
+  }
+
   function handleStartDateChange(value: string) {
     dispatch({ type: 'SET_DATES', startDate: value, endDate: state.endDate })
   }
 
   function handleEndDateChange(value: string) {
     dispatch({ type: 'SET_DATES', startDate: state.startDate, endDate: value })
+  }
+
+  function handlePersonaChange(personaId: string) {
+    // Toggle off if already selected
+    const next = state.personaOverride === personaId ? '' : personaId
+    dispatch({ type: 'SET_PERSONA', personaOverride: next })
   }
 
   function handleNext() {
@@ -62,6 +92,9 @@ export function PlannerIntake({
     })
     onSkipToGenerate()
   }
+
+  // Effective persona for display — override wins over building profile
+  const effectivePersona = state.personaOverride || building.primaryResidentGroup || ''
 
   return (
     <Card>
@@ -96,7 +129,32 @@ export function PlannerIntake({
           </div>
         )}
 
-        {/* Date range inputs */}
+        {/* ── Quick month presets ── */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-text-primary">Event month</p>
+          <div className="flex flex-wrap gap-2">
+            {MONTH_PRESETS.map((preset) => {
+              const { start, end } = preset.getRange()
+              const isActive = state.startDate === start && state.endDate === end
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => handlePreset(preset)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'border-accent-primary bg-accent-primary text-white'
+                      : 'border-border-default text-text-secondary hover:border-accent-primary hover:text-accent-primary'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── Custom date range inputs ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label
@@ -127,6 +185,41 @@ export function PlannerIntake({
               onChange={(e) => handleEndDateChange(e.target.value)}
             />
           </div>
+        </div>
+
+        {/* ── Target Persona selector ── */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-text-primary">Target Resident Persona</p>
+            {building.primaryResidentGroup && !state.personaOverride && (
+              <span className="text-xs text-text-muted">(from building profile)</span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {RESIDENT_OPTIONS.map((persona) => {
+              const isActive = effectivePersona === persona.id
+              return (
+                <button
+                  key={persona.id}
+                  type="button"
+                  onClick={() => handlePersonaChange(persona.id)}
+                  className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                    isActive
+                      ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                      : 'border-border-default text-text-secondary hover:border-accent-primary/50 hover:text-text-primary'
+                  }`}
+                >
+                  <p className="font-medium truncate">{persona.label}</p>
+                  <p className="text-text-muted mt-0.5 truncate">{persona.ageRange}</p>
+                </button>
+              )
+            })}
+          </div>
+          {effectivePersona && (
+            <p className="text-xs text-text-muted">
+              {RESIDENT_OPTIONS.find((p) => p.id === effectivePersona)?.description}
+            </p>
+          )}
         </div>
 
         {/* Action buttons */}

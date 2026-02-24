@@ -100,10 +100,14 @@ export function CalendarCell({
       <div className="flex-1 flex flex-col gap-0.5 mt-0.5">
         {visibleEvents.map((event) => {
           const status = computeEventStatus(event)
+          const isDraft = status === 'draft'
           return (
             <div
               key={event.id}
-              className="flex items-center gap-1 min-w-0"
+              className={cn(
+                'flex items-center gap-1 min-w-0 rounded px-1',
+                isDraft && 'border border-dashed border-gray-300 dark:border-gray-600',
+              )}
             >
               <span
                 className={cn(
@@ -111,7 +115,10 @@ export function CalendarCell({
                   STATUS_DOT_COLOURS[status],
                 )}
               />
-              <span className="text-[11px] sm:text-xs leading-4 text-text-secondary truncate">
+              <span className={cn(
+                'text-[11px] sm:text-xs leading-4 truncate',
+                isDraft ? 'text-text-muted italic' : 'text-text-secondary',
+              )}>
                 {event.name}
               </span>
             </div>

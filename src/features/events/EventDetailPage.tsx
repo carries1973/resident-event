@@ -15,6 +15,8 @@ import { EventPosterTab } from './tabs/EventPosterTab'
 import { EventDayOfTab } from './tabs/EventDayOfTab'
 import { EventCloseoutTab } from './tabs/EventCloseoutTab'
 import { EventRSVPManagerTab } from './tabs/EventRSVPManagerTab'
+import { EventComplianceTab } from './tabs/EventComplianceTab'
+import { EventBudgetTab } from './tabs/EventBudgetTab'
 import { toast } from 'sonner'
 
 export function EventDetailPage() {
@@ -160,6 +162,8 @@ export function EventDetailPage() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="budget">Budget</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -182,6 +186,12 @@ export function EventDetailPage() {
         </TabsContent>
         <TabsContent value="rsvp">
           <EventRSVPManagerTab event={event} />
+        </TabsContent>
+        <TabsContent value="budget">
+          <EventBudgetTab event={event} />
+        </TabsContent>
+        <TabsContent value="compliance">
+          <EventComplianceTab event={event} />
         </TabsContent>
       </Tabs>
 

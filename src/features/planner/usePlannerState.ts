@@ -15,8 +15,9 @@ export interface PlannerState {
   step: PlannerStep
   // Intake
   buildingId: string
-  startDate: string     // YYYY-MM-DD
-  endDate: string       // YYYY-MM-DD
+  startDate: string         // YYYY-MM-DD
+  endDate: string           // YYYY-MM-DD
+  personaOverride: string   // '' means use building's primaryResidentGroup
   // Options
   eventCount: number    // 1-10, default 3
   themes: string[]      // selected theme IDs
@@ -39,6 +40,7 @@ export interface PlannerState {
 export type PlannerAction =
   | { type: 'SET_INTAKE'; buildingId: string; startDate: string; endDate: string }
   | { type: 'SET_DATES'; startDate: string; endDate: string }
+  | { type: 'SET_PERSONA'; personaOverride: string }
   | { type: 'SET_OPTIONS'; eventCount: number; themes: string[]; budgetOverride: string; includeObservances: boolean; includeLocalContext: boolean }
   | { type: 'START_GENERATION' }
   | {
@@ -62,6 +64,7 @@ function createInitialState(buildingId: string): PlannerState {
     buildingId,
     startDate: '',
     endDate: '',
+    personaOverride: '',
     eventCount: 3,
     themes: [],
     budgetOverride: '',
@@ -90,6 +93,12 @@ function plannerReducer(state: PlannerState, action: PlannerAction): PlannerStat
         ...state,
         startDate: action.startDate,
         endDate: action.endDate,
+      }
+
+    case 'SET_PERSONA':
+      return {
+        ...state,
+        personaOverride: action.personaOverride,
       }
 
     case 'SET_OPTIONS':

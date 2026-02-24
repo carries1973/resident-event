@@ -6,6 +6,57 @@ import { useEventStore, computeEventStatus } from '@/lib/store/eventStore'
 import type { Event, EventCloseout } from '@/lib/types/event'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { toast } from 'sonner'
+import {
+  CheckSquare,
+  Square,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ClipboardCheck,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+// ---------------------------------------------------------------------------
+// Post-event follow-up checklist items
+// ---------------------------------------------------------------------------
+
+interface FollowUpItem {
+  id: string
+  label: string
+  detail?: string
+}
+
+const FOLLOWUP_ITEMS: FollowUpItem[] = [
+  { id: 'send_thankyou', label: 'Send thank-you email to attendees', detail: 'Within 24 hours' },
+  { id: 'collect_feedback', label: 'Collect feedback survey responses' },
+  { id: 'upload_photos', label: 'Upload event photos / videos' },
+  { id: 'social_recap', label: 'Post social media recap' },
+  { id: 'record_costs', label: 'Enter actual costs into budget tracker' },
+  { id: 'document_learnings', label: 'Document lessons learned for next time' },
+  { id: 'notify_waitlist', label: 'Notify waitlisted residents of next event' },
+  { id: 'archive_materials', label: 'Archive event materials (flyers, signage, etc.)' },
+  { id: 'assign_next', label: 'Assign next event planner / owner' },
+]
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function attendanceDelta(actual: number, expected: number): string {
+  if (expected === 0) return ''
+  const pct = Math.round(((actual - expected) / expected) * 100)
+  if (pct > 0) return `+${pct}%`
+  if (pct < 0) return `${pct}%`
+  return '0%'
+}
+
+function budgetDelta(actual: number, budgeted: number): string {
+  if (budgeted === 0) return ''
+  const diff = actual - budgeted
+  if (diff > 0) return `$${diff.toFixed(2)} over budget`
+  if (diff < 0) return `$${Math.abs(diff).toFixed(2)} under budget`
+  return 'On budget'
+}
 
 interface EventCloseoutTabProps {
   event: Event
@@ -17,22 +68,28 @@ export function EventCloseoutTab({ event }: EventCloseoutTabProps) {
   const status = computeEventStatus(event)
 
   const [showSkipConfirm, setShowSkipConfirm] = useState(false)
+  const [followUp, setFollowUp] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState<Partial<EventCloseout>>({
     actualAttendance: event.closeout?.actualAttendance ?? event.rsvpCount,
-    expectedAttendance: event.closeout?.expectedAttendance ?? event.rsvpCount,
+    expectedAttendance: event.closeout?.expectedAttendance ?? (event.rsvpLimit ?? event.rsvpCount),
     actualCost: event.closeout?.actualCost ?? 0,
-    budgetedCost: event.closeout?.budgetedCost ?? event.budgetEstimate.amount ?? 0,
+    budgetedCost: event.closeout?.budgetedCost ?? (event.budgetEstimate?.amount ?? 0),
     feedbackSummary: event.closeout?.feedbackSummary ?? '',
     lessonsLearned: event.closeout?.lessonsLearned ?? '',
     photosShared: event.closeout?.photosShared ?? false,
     thankYousSent: event.closeout?.thankYousSent ?? false,
   })
 
-  // Already completed with closeout data
+  function toggleFollowUp(id: string) {
+    setFollowUp((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  // ── Already completed with closeout data ──
   if (event.closeout) {
     return (
-      <div className="space-y-4">
-        <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-success/20 p-4">
+      <div className="space-y-6">
+        <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-success/20 p-4 flex items-center gap-2">
+          <ClipboardCheck className="h-5 w-5 text-success flex-shrink-0" />
           <p className="text-sm font-medium text-success">Closeout completed</p>
         </div>
         <CloseoutSummary closeout={event.closeout} />
@@ -40,29 +97,35 @@ export function EventCloseoutTab({ event }: EventCloseoutTabProps) {
     )
   }
 
-  // Completed without closeout data (i.e., closeout was skipped)
+  // ── Completed without closeout data (skipped) ──
   if (status === 'completed') {
     return (
-      <div className="text-center py-8">
-        <div className="rounded-lg bg-gray-50 dark:bg-gray-900/30 border border-border-default p-4 inline-block">
-          <p className="text-sm text-text-muted">
-            Closeout was skipped for this event. No post-event data was recorded.
-          </p>
+      <div className="text-center py-10">
+        <div className="rounded-lg bg-surface border border-border-default p-6 inline-block text-left max-w-sm">
+          <p className="text-sm font-medium text-text-primary mb-1">Closeout skipped</p>
+          <p className="text-sm text-text-muted">No post-event data was recorded for this event.</p>
         </div>
       </div>
     )
   }
 
-  // Not ready for closeout yet (event hasn't happened)
+  // ── Not ready yet ──
   if (status !== 'needs_closeout') {
     return (
-      <div className="text-center py-8">
-        <p className="text-text-muted">
-          Closeout will be available once this event has ended.
-        </p>
+      <div className="text-center py-10">
+        <ClipboardCheck className="h-10 w-10 text-text-muted mx-auto mb-3" />
+        <p className="text-text-muted text-sm">Closeout will be available once this event has ended.</p>
       </div>
     )
   }
+
+  const actualAtt = form.actualAttendance ?? 0
+  const expectedAtt = form.expectedAttendance ?? 0
+  const actualCost = form.actualCost ?? 0
+  const budgetedCost = form.budgetedCost ?? 0
+  const attDelta = attendanceDelta(actualAtt, expectedAtt)
+  const costDelta = budgetDelta(actualCost, budgetedCost)
+  const followUpDone = Object.values(followUp).filter(Boolean).length
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -78,114 +141,112 @@ export function EventCloseoutTab({ event }: EventCloseoutTabProps) {
       completedAt: new Date().toISOString(),
     }
     completeCloseout(event.id, closeout)
-    toast.success('Closeout completed!')
+    toast.success('Closeout completed! Great work.')
   }
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="space-y-8">
+      {/* Needs-closeout banner */}
+      <div className="rounded-lg border border-warning/30 bg-amber-50 dark:bg-amber-950/20 p-4 text-sm">
+        <p className="font-medium text-warning">This event needs a closeout.</p>
+        <p className="text-text-muted mt-0.5">Fill in the details below to complete your records.</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-8">
         {/* Attendance */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-text-primary">Attendance</h3>
+          <h3 className="text-sm font-semibold text-text-primary border-b border-border-default pb-2">Attendance</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Expected</label>
-              <Input
-                type="number"
-                min={0}
-                value={form.expectedAttendance ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, expectedAttendance: Number(e.target.value) }))}
-              />
+              <label className="block text-xs text-text-muted mb-1.5 font-medium">Expected</label>
+              <Input type="number" min={0} value={form.expectedAttendance ?? ''} onChange={(e) => setForm((f) => ({ ...f, expectedAttendance: Number(e.target.value) }))} />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Actual</label>
-              <Input
-                type="number"
-                min={0}
-                value={form.actualAttendance ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, actualAttendance: Number(e.target.value) }))}
-              />
+              <label className="block text-xs text-text-muted mb-1.5 font-medium">Actual</label>
+              <Input type="number" min={0} value={form.actualAttendance ?? ''} onChange={(e) => setForm((f) => ({ ...f, actualAttendance: Number(e.target.value) }))} />
             </div>
           </div>
+          {attDelta && expectedAtt > 0 && (
+            <div className={cn('flex items-center gap-1.5 text-sm font-medium', actualAtt >= expectedAtt ? 'text-success' : 'text-warning')}>
+              {actualAtt > expectedAtt ? <TrendingUp className="h-4 w-4" /> : actualAtt < expectedAtt ? <TrendingDown className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+              {attDelta} vs expected
+            </div>
+          )}
         </section>
 
         {/* Budget */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-text-primary">Budget</h3>
+          <h3 className="text-sm font-semibold text-text-primary border-b border-border-default pb-2">Budget Reconciliation</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Budgeted ($)</label>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.budgetedCost ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, budgetedCost: Number(e.target.value) }))}
-              />
+              <label className="block text-xs text-text-muted mb-1.5 font-medium">Budgeted ($)</label>
+              <Input type="number" min={0} step={0.01} value={form.budgetedCost ?? ''} onChange={(e) => setForm((f) => ({ ...f, budgetedCost: Number(e.target.value) }))} />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Actual ($)</label>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={form.actualCost ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, actualCost: Number(e.target.value) }))}
-              />
+              <label className="block text-xs text-text-muted mb-1.5 font-medium">Actual Spend ($)</label>
+              <Input type="number" min={0} step={0.01} value={form.actualCost ?? ''} onChange={(e) => setForm((f) => ({ ...f, actualCost: Number(e.target.value) }))} />
             </div>
           </div>
+          {budgetedCost > 0 && (
+            <div className={cn('flex items-center gap-1.5 text-sm font-medium', actualCost <= budgetedCost ? 'text-success' : 'text-danger')}>
+              {actualCost > budgetedCost ? <TrendingUp className="h-4 w-4" /> : actualCost < budgetedCost ? <TrendingDown className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+              {costDelta}
+            </div>
+          )}
         </section>
 
         {/* Feedback */}
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-text-primary">Feedback</h3>
-          <Textarea
-            value={form.feedbackSummary}
-            onChange={(e) => setForm((f) => ({ ...f, feedbackSummary: e.target.value }))}
-            placeholder="Overall feedback summary..."
-            rows={2}
-          />
-          <Textarea
-            value={form.lessonsLearned}
-            onChange={(e) => setForm((f) => ({ ...f, lessonsLearned: e.target.value }))}
-            placeholder="Lessons learned for next time..."
-            rows={2}
-          />
+          <h3 className="text-sm font-semibold text-text-primary border-b border-border-default pb-2">Feedback &amp; Learnings</h3>
+          <div className="space-y-1">
+            <label className="block text-xs text-text-muted font-medium">Resident feedback summary</label>
+            <Textarea value={form.feedbackSummary} onChange={(e) => setForm((f) => ({ ...f, feedbackSummary: e.target.value }))} placeholder="Overall feedback from residents..." rows={2} />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-text-muted font-medium">Lessons learned</label>
+            <Textarea value={form.lessonsLearned} onChange={(e) => setForm((f) => ({ ...f, lessonsLearned: e.target.value }))} placeholder="What would you do differently next time?" rows={2} />
+          </div>
         </section>
 
-        {/* Content sharing */}
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold text-text-primary">Follow-up</h3>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.photosShared}
-              onChange={(e) => setForm((f) => ({ ...f, photosShared: e.target.checked }))}
-              className="h-4 w-4 rounded"
-            />
-            Photos/videos shared
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.thankYousSent}
-              onChange={(e) => setForm((f) => ({ ...f, thankYousSent: e.target.checked }))}
-              className="h-4 w-4 rounded"
-            />
-            Thank-you notes sent
-          </label>
+        {/* Post-Event Follow-Up Checklist */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between border-b border-border-default pb-2">
+            <h3 className="text-sm font-semibold text-text-primary">Post-Event Follow-Up</h3>
+            <span className="text-xs text-text-muted">{followUpDone}/{FOLLOWUP_ITEMS.length} done</span>
+          </div>
+          <ul className="space-y-1">
+            {FOLLOWUP_ITEMS.map((item) => {
+              const checked = !!(followUp[item.id])
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleFollowUp(item.id)
+                      if (item.id === 'upload_photos') setForm((f) => ({ ...f, photosShared: !checked }))
+                      if (item.id === 'send_thankyou') setForm((f) => ({ ...f, thankYousSent: !checked }))
+                    }}
+                    className={cn('flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors min-h-[44px] hover:bg-surface-hover', checked && 'opacity-60')}
+                  >
+                    {checked
+                      ? <CheckSquare className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
+                      : <Square className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <span className={cn('text-sm block', checked ? 'line-through text-text-muted' : 'text-text-primary')}>{item.label}</span>
+                      {item.detail && <span className="text-xs text-text-muted">{item.detail}</span>}
+                    </div>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
         </section>
 
         {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-border-default">
-          <Button type="submit">Complete closeout</Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowSkipConfirm(true)}
-          >
-            Skip closeout
-          </Button>
+        <div className="flex gap-3 pt-2 border-t border-border-default">
+          <Button type="submit">Complete Closeout</Button>
+          <Button type="button" variant="outline" onClick={() => setShowSkipConfirm(true)}>Skip Closeout</Button>
         </div>
       </form>
 
@@ -193,41 +254,44 @@ export function EventCloseoutTab({ event }: EventCloseoutTabProps) {
         open={showSkipConfirm}
         onOpenChange={setShowSkipConfirm}
         title="Skip closeout?"
-        description="Skipping closeout means no data will be recorded for this event. You can't undo this. Continue?"
+        description="Skipping means no data will be recorded for this event. Continue?"
         confirmLabel="Skip closeout"
         variant="destructive"
-        onConfirm={() => {
-          skipCloseout(event.id)
-          toast.success('Closeout skipped')
-        }}
+        onConfirm={() => { skipCloseout(event.id); toast.success('Closeout skipped') }}
       />
     </div>
   )
 }
 
 function CloseoutSummary({ closeout }: { closeout: EventCloseout }) {
+  const attDelta = attendanceDelta(closeout.actualAttendance, closeout.expectedAttendance)
+  const costDelta = budgetDelta(closeout.actualCost, closeout.budgetedCost)
   return (
-    <div className="grid grid-cols-2 gap-4 text-sm">
-      <div>
-        <span className="text-text-muted">Attendance:</span>{' '}
-        {closeout.actualAttendance} / {closeout.expectedAttendance} expected
-      </div>
-      <div>
-        <span className="text-text-muted">Cost:</span>{' '}
-        ${closeout.actualCost.toFixed(2)} / ${closeout.budgetedCost.toFixed(2)} budgeted
-      </div>
-      {closeout.feedbackSummary && (
-        <div className="col-span-2">
-          <span className="text-text-muted">Feedback:</span>{' '}
-          {closeout.feedbackSummary}
+    <div className="space-y-4 text-sm">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="rounded-lg border border-border-default p-3">
+          <p className="text-xs text-text-muted font-medium">Attendance</p>
+          <p className="text-text-primary font-semibold text-base mt-0.5">
+            {closeout.actualAttendance}
+            <span className="text-text-muted font-normal text-sm"> / {closeout.expectedAttendance} expected</span>
+          </p>
+          {attDelta && <p className={cn('text-xs font-medium mt-0.5', closeout.actualAttendance >= closeout.expectedAttendance ? 'text-success' : 'text-warning')}>{attDelta}</p>}
         </div>
-      )}
-      {closeout.lessonsLearned && (
-        <div className="col-span-2">
-          <span className="text-text-muted">Lessons:</span>{' '}
-          {closeout.lessonsLearned}
+        <div className="rounded-lg border border-border-default p-3">
+          <p className="text-xs text-text-muted font-medium">Spend</p>
+          <p className="text-text-primary font-semibold text-base mt-0.5">
+            ${closeout.actualCost.toFixed(2)}
+            <span className="text-text-muted font-normal text-sm"> / ${closeout.budgetedCost.toFixed(2)} budgeted</span>
+          </p>
+          {costDelta && <p className={cn('text-xs font-medium mt-0.5', closeout.actualCost <= closeout.budgetedCost ? 'text-success' : 'text-danger')}>{costDelta}</p>}
         </div>
-      )}
+      </div>
+      {closeout.feedbackSummary && <div><p className="text-xs text-text-muted font-medium mb-1">Feedback</p><p className="text-text-secondary">{closeout.feedbackSummary}</p></div>}
+      {closeout.lessonsLearned && <div><p className="text-xs text-text-muted font-medium mb-1">Lessons learned</p><p className="text-text-secondary">{closeout.lessonsLearned}</p></div>}
+      <div className="flex gap-4 pt-1">
+        <span className={cn('text-xs', closeout.photosShared ? 'text-success' : 'text-text-muted')}>{closeout.photosShared ? '✓' : '○'} Photos shared</span>
+        <span className={cn('text-xs', closeout.thankYousSent ? 'text-success' : 'text-text-muted')}>{closeout.thankYousSent ? '✓' : '○'} Thank-yous sent</span>
+      </div>
     </div>
   )
 }
