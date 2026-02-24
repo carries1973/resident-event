@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +14,8 @@ import {
   TrendingDown,
   Minus,
   ClipboardCheck,
+  CalendarClock,
+  ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -63,6 +66,7 @@ interface EventCloseoutTabProps {
 }
 
 export function EventCloseoutTab({ event }: EventCloseoutTabProps) {
+  const navigate = useNavigate()
   const completeCloseout = useEventStore((s) => s.completeCloseout)
   const skipCloseout = useEventStore((s) => s.skipCloseout)
   const status = computeEventStatus(event)
@@ -109,12 +113,88 @@ export function EventCloseoutTab({ event }: EventCloseoutTabProps) {
     )
   }
 
-  // ── Not ready yet ──
+  // ── Not ready yet — show informative preview ──
   if (status !== 'needs_closeout') {
+    // Format event date + time for display
+    const eventDateDisplay = event.date
+      ? new Date(event.date + 'T00:00:00').toLocaleDateString('en-CA', {
+          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        })
+      : null
+    const timeDisplay = event.startTime && event.endTime
+      ? `${event.startTime} – ${event.endTime}`
+      : event.startTime ?? null
+    const estimatedAttendance = event.rsvpLimit ?? event.rsvpCount ?? null
+
     return (
-      <div className="text-center py-10">
-        <ClipboardCheck className="h-10 w-10 text-text-muted mx-auto mb-3" />
-        <p className="text-text-muted text-sm">Closeout will be available once this event has ended.</p>
+      <div className="space-y-6 max-w-lg">
+        {/* Status banner */}
+        <div className="flex items-start gap-3 rounded-lg border border-border-default bg-surface p-4">
+          <CalendarClock className="h-5 w-5 text-text-muted shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-text-primary">Event not yet completed</p>
+            {eventDateDisplay ? (
+              <p className="text-sm text-text-secondary">
+                Scheduled for <span className="font-medium">{eventDateDisplay}</span>
+                {timeDisplay && <> at <span className="font-medium">{timeDisplay}</span></>}.
+              </p>
+            ) : (
+              <p className="text-sm text-text-secondary">No date set yet.</p>
+            )}
+            <p className="text-sm text-text-muted">Closeout will be available after the event ends.</p>
+          </div>
+        </div>
+
+        {/* What you'll be able to do */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+            When complete, you'll be able to:
+          </p>
+          <ul className="space-y-2">
+            {[
+              estimatedAttendance
+                ? `Record actual attendance (estimated: ${estimatedAttendance})`
+                : 'Record actual attendance vs. expected',
+              'Send thank-you email to attendees',
+              'Collect and summarise resident feedback',
+              event.budgetEstimate?.amount
+                ? `Reconcile budget (estimated: $${event.budgetEstimate.amount})`
+                : 'Reconcile budget (actual vs. estimated costs)',
+              'Upload event photos to the library',
+              'Document lessons learned for future events',
+              'Archive event materials',
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2 text-sm text-text-secondary">
+                <span className="text-success font-bold mt-0.5 shrink-0">✓</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Navigation CTAs */}
+        <div className="flex items-center gap-3 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/events/${event.id}/edit`)}
+          >
+            Edit Event
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              // Switch to Day-Of tab by dispatching a click on the tab trigger
+              const dayOfTab = document.querySelector('[data-value="dayof"]') as HTMLElement
+              dayOfTab?.click()
+            }}
+          >
+            Go to Day-Of
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
     )
   }

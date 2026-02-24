@@ -16,6 +16,7 @@ export interface QuickIdea {
 export function buildQuickIdeasPrompt(
   building: Building,
   topic: string,
+  options?: { personaOverride?: string; eventMonth?: string },
 ): { system: string; user: string } {
   const amenitiesList = [...(building.amenities ?? []), ...(building.customAmenities ?? [])]
   const amenitiesDisplay =
@@ -23,9 +24,13 @@ export function buildQuickIdeasPrompt(
       ? amenitiesList.join(', ')
       : 'None specified — suggest common-area locations only'
 
-  const residentMix = building.primaryResidentGroup
+  const effectivePersona = options?.personaOverride || building.primaryResidentGroup || ''
+  const residentMix = effectivePersona
     || 'Broadly inclusive — families, seniors, students, professionals'
-  const residentMixLabel = building.primaryResidentGroup ? 'USER-PROVIDED' : 'AI-INFERRED'
+  const residentMixLabel = effectivePersona ? 'USER-PROVIDED' : 'AI-INFERRED'
+  const monthContext = options?.eventMonth
+    ? `\n- Target Month: ${options.eventMonth} [USER-PROVIDED]`
+    : ''
 
   const system = `You are the Resident Event Planner (REP) — a quick-brainstorm assistant for Canadian residential property managers.
 
@@ -34,7 +39,7 @@ BUILDING CONTEXT
 ═══════════════════════════════════════════════════════════════
 - Building: ${building.name} [USER-PROVIDED]
 - City: ${building.city}, ${building.province} [USER-PROVIDED]
-- Primary Residents: ${residentMix} [${residentMixLabel}]${building.secondaryResidentGroup ? `\n- Secondary Residents: ${building.secondaryResidentGroup} [USER-PROVIDED]` : ''}
+- Primary Residents: ${residentMix} [${residentMixLabel}]${building.secondaryResidentGroup ? `\n- Secondary Residents: ${building.secondaryResidentGroup} [USER-PROVIDED]` : ''}${monthContext}
 - Available Amenities: ${amenitiesDisplay} [${amenitiesList.length > 0 ? 'USER-PROVIDED' : 'AI-INFERRED'}]
 - Brand Tone: ${(building.brandTones ?? []).length > 0 ? (building.brandTones ?? []).join(', ') + ' [USER-PROVIDED]' : 'Professional and welcoming [AI-INFERRED]'}
 - Budget Tier: ${building.defaultBudgetTier} [USER-PROVIDED]
@@ -67,9 +72,11 @@ RULES
     topic.toLowerCase().includes('random') ||
     topic.trim() === ''
 
+  const monthSuffix = options?.eventMonth ? ` for ${options.eventMonth}` : ''
+
   const user = isSurpriseMe
-    ? `Surprise me! Suggest a varied mix of event ideas for ${building.name} — different categories, different vibes, something for everyone.`
-    : `Generate quick event ideas around this topic or theme: "${topic}"`
+    ? `Surprise me! Suggest a varied mix of event ideas for ${building.name}${monthSuffix} — different categories, different vibes, something for everyone.`
+    : `Generate quick event ideas around this topic or theme: "${topic}"${monthSuffix}`
 
   return { system, user }
 }

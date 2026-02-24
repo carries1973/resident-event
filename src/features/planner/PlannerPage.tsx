@@ -27,6 +27,30 @@ import { PlannerError } from './PlannerError'
 import { PlannerSaveFlow } from './PlannerSaveFlow'
 import { ensureBuildingDefaults, type Building } from '@/lib/types/building'
 
+// Quick month-range presets used in both modes
+const MONTH_PRESETS = [
+  { label: 'This month', offset: 0 },
+  { label: 'Next month', offset: 1 },
+  { label: 'Next 3 months', offset: 3 },
+  { label: 'Next 6 months', offset: 6 },
+]
+
+function getMonthPresetLabel(offset: number): string {
+  const now = new Date()
+  const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+  return d.toLocaleString('en-CA', { month: 'long', year: 'numeric' })
+}
+
+// Short persona labels for the tag bar (subset for Quick Ideas)
+const QUICK_PERSONA_OPTIONS = [
+  { id: 'urban_professional', label: 'Urban Pro' },
+  { id: 'young_family', label: 'Families' },
+  { id: 'downsizer', label: 'Seniors' },
+  { id: 'eco_conscious', label: 'Eco / Wellness' },
+  { id: 'roommate_renter', label: 'Social' },
+  { id: 'healthcare_professional', label: 'Healthcare' },
+]
+
 export function PlannerPage() {
   const navigate = useNavigate()
   const buildings = useBuildingStore((s) => s.buildings)
@@ -38,6 +62,10 @@ export function PlannerPage() {
   )
   const [mode, setMode] = useState<string>('quick')
   const [showSaveFlow, setShowSaveFlow] = useState(false)
+
+  // Shared month + persona state (visible above tabs in both modes)
+  const [selectedMonthOffset, setSelectedMonthOffset] = useState<number | null>(null)
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>('')
 
   // Full plan wizard state
   const [planState, planDispatch] = usePlannerState(selectedBuildingId)
@@ -305,6 +333,90 @@ export function PlannerPage() {
         </Select>
       </div>
 
+      {/* ── Shared filters: Event Month + Target Persona ── */}
+      {selectedBuilding && (
+        <div className="space-y-3 rounded-lg border border-border-default bg-surface p-4">
+          {/* Event Month */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">Event Month</p>
+            <div className="flex flex-wrap gap-2">
+              {MONTH_PRESETS.map((preset) => {
+                const isActive = selectedMonthOffset === preset.offset
+                return (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => {
+                      const offset = isActive ? null : preset.offset
+                      setSelectedMonthOffset(offset)
+                      if (offset !== null) {
+                        const now = new Date()
+                        // span: presets of offset 0 or 1 = 1 month; 3 or 6 = that many months
+                        const span = preset.offset <= 1 ? 1 : preset.offset
+                        const start = new Date(now.getFullYear(), now.getMonth() + offset, 1)
+                        const endDate = new Date(now.getFullYear(), now.getMonth() + offset + span, 0)
+                        planDispatch({ type: 'SET_DATES', startDate: start.toISOString().slice(0, 10), endDate: endDate.toISOString().slice(0, 10) })
+                      }
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'border-accent-primary bg-accent-primary text-white'
+                        : 'border-border-default text-text-secondary hover:border-accent-primary hover:text-accent-primary'
+                    }`}
+                  >
+                    {preset.label}
+                    {isActive && (
+                      <span className="ml-1 opacity-75">({getMonthPresetLabel(preset.offset)})</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Target Persona */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+              Target Persona
+              {selectedBuilding.primaryResidentGroup && !selectedPersonaId && (
+                <span className="ml-2 font-normal normal-case text-text-muted/70">(using building default)</span>
+              )}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_PERSONA_OPTIONS.map((p) => {
+                const isActive = selectedPersonaId
+                  ? selectedPersonaId === p.id
+                  : selectedBuilding.primaryResidentGroup === p.id
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      const next = selectedPersonaId === p.id ? '' : p.id
+                      setSelectedPersonaId(next)
+                      planDispatch({ type: 'SET_PERSONA', personaOverride: next })
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      isActive
+                        ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                        : 'border-border-default text-text-secondary hover:border-accent-primary/50 hover:text-text-primary'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                )
+              })}
+              {/* Show all personas via a "More..." option in Full Plan mode */}
+              {mode === 'full' && (
+                <span className="text-xs text-text-muted self-center ml-1">
+                  → More options in Full Plan step 1
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mode toggle + content */}
       {selectedBuilding ? (
         <Tabs value={mode} onValueChange={setMode}>
@@ -320,7 +432,12 @@ export function PlannerPage() {
           </TabsList>
 
           <TabsContent value="quick">
-            <QuickIdeas building={selectedBuilding} onExpandToFullPlan={handleExpandToFullPlan} />
+            <QuickIdeas
+              building={selectedBuilding}
+              onExpandToFullPlan={handleExpandToFullPlan}
+              personaOverride={selectedPersonaId}
+              eventMonthLabel={selectedMonthOffset !== null ? getMonthPresetLabel(selectedMonthOffset) : undefined}
+            />
           </TabsContent>
 
           <TabsContent value="full">

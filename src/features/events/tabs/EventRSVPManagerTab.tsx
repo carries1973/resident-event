@@ -131,15 +131,38 @@ export function EventRSVPManagerTab({ event }: EventRSVPManagerTabProps) {
 
   if (!event.rsvpEnabled) {
     return (
-      <div className="text-center py-8 space-y-3">
-        <p className="text-text-muted">RSVP is not enabled for this event.</p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => updateEvent(event.id, { rsvpEnabled: true })}
-        >
-          Enable RSVP
-        </Button>
+      <div className="max-w-sm space-y-4 py-4">
+        <div className="rounded-lg border border-border-default bg-surface p-5 space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-text-primary mb-1">RSVP is not enabled for this event</p>
+            <p className="text-sm text-text-secondary">Enable RSVP tracking to get a unique link, QR code, and attendance tracker residents can use to register.</p>
+          </div>
+
+          <ul className="space-y-1.5">
+            {[
+              'Unique public RSVP link for residents',
+              'QR code to print on flyers & posters',
+              'Live attendance count & capacity bar',
+              'Automatic waitlist when capacity is reached',
+              'Export attendee list as CSV',
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2 text-sm text-text-secondary">
+                <span className="text-success font-bold shrink-0 mt-0.5">✓</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+
+          <Button
+            onClick={() => {
+              updateEvent(event.id, { rsvpEnabled: true })
+              toast.success('RSVP enabled — your link and QR code are ready!')
+            }}
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Enable RSVP for This Event
+          </Button>
+        </div>
       </div>
     )
   }

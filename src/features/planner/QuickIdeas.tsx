@@ -53,9 +53,11 @@ function saveSessions(sessions: QuickIdeasSession[]): void {
 interface QuickIdeasProps {
   building: Building
   onExpandToFullPlan?: (idea: AiQuickIdea) => void
+  personaOverride?: string
+  eventMonthLabel?: string
 }
 
-export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
+export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, eventMonthLabel }: QuickIdeasProps) {
   const [topic, setTopic] = useState('')
   const [ideas, setIdeas] = useState<AiQuickIdea[]>([])
   const [loading, setLoading] = useState(false)
@@ -78,7 +80,10 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
       setIdeas([])
 
       try {
-        const { system, user } = buildQuickIdeasPrompt(building, effectiveTopic)
+        const { system, user } = buildQuickIdeasPrompt(building, effectiveTopic, {
+          personaOverride: personaOverride || undefined,
+          eventMonth: eventMonthLabel || undefined,
+        })
         const result = await generateAI({
           systemPrompt: system,
           userMessage: user,
@@ -121,7 +126,7 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
         setLoading(false)
       }
     },
-    [topic, building, sessions],
+    [topic, building, sessions, personaOverride, eventMonthLabel],
   )
 
   const handleDismissIdea = useCallback((index: number) => {

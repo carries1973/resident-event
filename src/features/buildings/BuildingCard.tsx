@@ -96,19 +96,23 @@ export function BuildingCard({ building, onDuplicate, onDelete }: BuildingCardPr
           </DropdownMenu>
         </div>
 
-        {/* Quick stats */}
+        {/* Quick stats: resident group + unit count */}
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-text-muted">
-          {building.unitCount != null && building.unitCount > 0 && (
-            <span>{building.unitCount} units</span>
-          )}
           {building.primaryResidentGroup && (
             <span className="capitalize">{building.primaryResidentGroup.replace(/_/g, ' ')}</span>
           )}
+          {building.unitCount != null && building.unitCount > 0 && (
+            <span>{building.unitCount} units</span>
+          )}
         </div>
 
-        {/* Amenity pills */}
-        {(building.amenities?.length ?? 0) > 0 && (() => {
-          const all = [...building.amenities, ...(building.customAmenities ?? [])]
+        {/* Amenity pills — show if any standard or custom amenities exist */}
+        {(() => {
+          const all = [
+            ...(building.amenities ?? []),
+            ...(building.customAmenities ?? []),
+          ]
+          if (all.length === 0) return null
           const visible = all.slice(0, 5)
           const overflow = all.length - visible.length
           return (
