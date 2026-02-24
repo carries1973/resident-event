@@ -147,7 +147,41 @@ export const aiQuickIdeaSchema = z
 export type AiQuickIdea = z.infer<typeof aiQuickIdeaSchema>
 
 // ---------------------------------------------------------------------------
-// 3. AI Marketing Output
+// 3. AI Local Community Events Output
+// ---------------------------------------------------------------------------
+
+export const aiLocalEventSchema = z
+  .object({
+    name: z.string().min(1, 'Event name is required'),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+    startTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, 'Start time must be in HH:mm format')
+      .optional(),
+    endTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, 'End time must be in HH:mm format')
+      .optional(),
+    location: z.string().default(''),
+    category: z
+      .enum(['market', 'festival', 'arts', 'sports', 'community', 'other'])
+      .default('community'),
+    description: z.string().default(''),
+    url: z.string().optional(),
+  })
+  .passthrough()
+
+export const aiLocalEventsResponseSchema = z.object({
+  events: z.array(aiLocalEventSchema).min(1, 'At least one event is required'),
+})
+
+export type AiLocalEvent = z.infer<typeof aiLocalEventSchema>
+export type AiLocalEventsResponse = z.infer<typeof aiLocalEventsResponseSchema>
+
+// ---------------------------------------------------------------------------
+// 4. AI Marketing Output
 // ---------------------------------------------------------------------------
 
 const posterCopySchema = z
