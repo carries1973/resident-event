@@ -304,12 +304,19 @@ export async function exportCalendarPDF(
 
           const maxObs = 2 // never crowd the cell
           const displayObs = dayObservances.slice(0, maxObs)
+          const bulletSize = 0.055 // small square bullet (inches)
+          const bulletGap = 0.04  // gap between bullet and text
           for (const obs of displayObs) {
-            const obsText = truncateText(doc, obs.name, maxTextWidth)
-            doc.text(obsText, x + 0.05, contentY)
+            // Draw a small filled square as an icon substitute
+            doc.setFillColor(0x99, 0x99, 0x99)
+            doc.rect(x + 0.05, contentY - bulletSize + 0.005, bulletSize, bulletSize, 'F')
+            const obsText = truncateText(doc, obs.name, maxTextWidth - bulletSize - bulletGap)
+            doc.setTextColor(0x77, 0x77, 0x77)
+            doc.text(obsText, x + 0.05 + bulletSize + bulletGap, contentY)
             contentY += lineH
           }
           if (dayObservances.length > maxObs) {
+            doc.setFillColor(0x99, 0x99, 0x99)
             doc.text(`+${dayObservances.length - maxObs} more`, x + 0.05, contentY)
             contentY += lineH
           }

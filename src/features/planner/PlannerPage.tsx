@@ -339,6 +339,7 @@ export function PlannerPage() {
             <QuickIdeas
               building={selectedBuilding}
               onExpandToFullPlan={handleExpandToFullPlan}
+              personaOverride={selectedBuilding.primaryResidentGroup || undefined}
             />
           </TabsContent>
 

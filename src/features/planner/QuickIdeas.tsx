@@ -10,7 +10,9 @@ import {
   Play,
   Trash2,
   Building2,
+  Users,
 } from 'lucide-react'
+import { RESIDENT_OPTIONS } from '@/lib/data/residentTypes'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -66,6 +68,15 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
+  // Persona selection: user can switch between primary and secondary for generation
+  const defaultPersonaId = personaOverride || building.primaryResidentGroup || ''
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>(defaultPersonaId)
+
+  // Available personas for this building (primary + optional secondary)
+  const availablePersonas = RESIDENT_OPTIONS.filter((p) =>
+    [building.primaryResidentGroup, building.secondaryResidentGroup].filter(Boolean).includes(p.id),
+  )
+
   const generate = useCallback(
     async (overrideTopic?: string) => {
       const effectiveTopic = overrideTopic ?? topic
@@ -81,7 +92,7 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
 
       try {
         const { system, user } = buildQuickIdeasPrompt(building, effectiveTopic, {
-          personaOverride: personaOverride || undefined,
+          personaOverride: selectedPersonaId || personaOverride || undefined,
           eventMonth: eventMonthLabel || undefined,
         })
         const result = await generateAI({
@@ -126,7 +137,7 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
         setLoading(false)
       }
     },
-    [topic, building, sessions, personaOverride, eventMonthLabel],
+    [topic, building, sessions, personaOverride, selectedPersonaId, eventMonthLabel],
   )
 
   const handleDismissIdea = useCallback((index: number) => {
@@ -176,6 +187,8 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
   const visibleAmenities = amenitiesExpanded ? allAmenities : allAmenities.slice(0, 4)
   const hiddenAmenityCount = allAmenities.length - 4
 
+  const hasPersonas = availablePersonas.length > 0
+
   return (
     <div className="space-y-6 mt-4">
       {/* Building data summary with expandable amenities */}
@@ -214,6 +227,52 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
           </p>
         )}
       </div>
+
+      {/* Target persona selector — shown when the building has at least one persona set */}
+      {hasPersonas && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Users className="h-4 w-4 text-text-muted shrink-0" />
+          <span className="text-text-muted shrink-0">Target resident:</span>
+          {availablePersonas.map((persona) => {
+            const isActive = selectedPersonaId === persona.id
+            const isPrimary = persona.id === building.primaryResidentGroup
+            return (
+              <button
+                key={persona.id}
+                type="button"
+                onClick={() => setSelectedPersonaId(persona.id)}
+                title={`${persona.description} · Ages ${persona.ageRange}`}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  isActive
+                    ? 'border-accent-primary/40 bg-accent-primary/10 text-accent-primary'
+                    : 'border-border-default bg-surface text-text-muted hover:border-accent-primary/30 hover:text-text-primary'
+                }`}
+              >
+                {persona.label}
+                <span className={isActive ? 'text-accent-primary/60' : 'text-text-muted/60'}>
+                  {persona.ageRange}
+                </span>
+                {isPrimary && (
+                  <span className={`text-[10px] ${isActive ? 'text-accent-primary/50' : 'text-text-muted/50'}`}>
+                    primary
+                  </span>
+                )}
+              </button>
+            )
+          })}
+          {availablePersonas.length > 1 && (
+            <span className="text-xs text-text-muted">
+              · Click to switch focus
+            </span>
+          )}
+          <a
+            href={`/buildings/${building.id}/edit`}
+            className="text-xs text-text-muted hover:text-accent-primary underline-offset-2 hover:underline ml-1"
+          >
+            Edit in building profile
+          </a>
+        </div>
+      )}
 
       {/* Input area */}
       <div className="space-y-3">
