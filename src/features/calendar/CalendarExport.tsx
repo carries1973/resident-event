@@ -10,9 +10,15 @@
  */
 
 import { useState } from 'react'
-import { Download } from 'lucide-react'
+import { Download, Printer, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useEventStore } from '@/lib/store/eventStore'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { useAppStore } from '@/lib/store/appStore'
@@ -32,7 +38,7 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
 
   const building = currentBuildingId ? getBuildingById(currentBuildingId) : undefined
 
-  async function handleExport() {
+  async function handleExportPDF() {
     if (!building) {
       toast.error('Please select a building first to export the calendar.')
       return
@@ -76,16 +82,35 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
     }
   }
 
+  function handlePrint() {
+    window.print()
+  }
+
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleExport}
-      disabled={isExporting}
-      aria-label="Export calendar as PDF"
-    >
-      <Download className="size-4" />
-      {isExporting ? 'Exporting...' : 'Export PDF'}
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isExporting}
+          aria-label="Export or print calendar"
+          className="gap-1"
+        >
+          <Download className="h-4 w-4" />
+          {isExporting ? 'Exporting...' : 'Export'}
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handleExportPDF} disabled={isExporting}>
+          <Download className="mr-2 h-4 w-4" />
+          Export as PDF
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handlePrint}>
+          <Printer className="mr-2 h-4 w-4" />
+          Print calendar
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
