@@ -2,8 +2,12 @@
  * CalendarExport
  *
  * Button + export flow for generating a building-branded monthly
- * calendar PDF. Gathers events and building data from stores, then
- * delegates to the calendarPDF export module.
+ * calendar PDF. Gathers events, observances, and building data from
+ * stores, then delegates to the calendarPDF export module.
+ *
+ * The exported PDF is 2 pages:
+ *   1. Calendar grid (events + observance names in cells)
+ *   2. Legend (all observances with dates + all events with time/location)
  *
  * Shows toast notifications for loading, success, and error states.
  * Requires a building to be selected (via appStore.currentBuildingId).
@@ -23,6 +27,7 @@ import { useEventStore } from '@/lib/store/eventStore'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { useAppStore } from '@/lib/store/appStore'
 import { exportCalendarPDF } from '@/lib/export/calendarPDF'
+import { DEFAULT_OBSERVANCES } from '@/lib/data/observances'
 
 interface CalendarExportProps {
   year: number
@@ -33,6 +38,7 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
   const [isExporting, setIsExporting] = useState(false)
 
   const currentBuildingId = useAppStore((s) => s.currentBuildingId)
+  const disabledObservanceIds = useAppStore((s) => s.disabledObservanceIds)
   const getBuildingById = useBuildingStore((s) => s.getBuildingById)
   const events = useEventStore((s) => s.events)
 
@@ -59,6 +65,13 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
         )
       })
 
+      // Filter observances for the current month, excluding ones the user has disabled
+      const monthObservances = DEFAULT_OBSERVANCES.filter((obs) => {
+        if (obs.month !== month) return false
+        if (disabledObservanceIds.includes(obs.id)) return false
+        return true
+      })
+
       await exportCalendarPDF({
         year,
         month,
@@ -66,6 +79,14 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
           date: e.date,
           name: e.name,
           status: e.status,
+          startTime: e.startTime || undefined,
+          endTime: e.endTime || undefined,
+          location: e.location || undefined,
+        })),
+        observances: monthObservances.map((obs) => ({
+          name: obs.name,
+          month: obs.month,
+          day: obs.day,
         })),
         buildingName: building.name,
         brandColor: building.brandColor || '#3B7BF4',

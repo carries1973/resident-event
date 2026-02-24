@@ -4,8 +4,12 @@ import type { Building } from '@/lib/types/building'
 /**
  * Builds system + user prompts for marketing materials generation.
  *
- * Aligned to REP v3.3 marketing output specification:
- * - Resident Comms Kit (email subjects, body, SMS)
+ * Aligned to REP v3.3 marketing output specification — expanded with the
+ * full Resident Event Marketing Corpus (pre-event → event-day → post-event
+ * campaign sequence):
+ *
+ * - Resident Comms Kit (email subjects, body, SMS — 5 subject options)
+ * - Full campaign sequence: Invitation → Reminder → Thank You
  * - Marketing Copy (poster, social, visual prompt)
  * - Design Specs (Canva dimensions, layout, export formats)
  * - Canadian English compliance
@@ -15,7 +19,7 @@ export function buildMarketingPrompt(
   event: Event,
   building: Building,
 ): { system: string; user: string } {
-  const system = `You are a Canadian residential property marketing specialist generating materials for an event at a multifamily residential building.
+  const system = `You are a Canadian residential property marketing specialist generating a complete event marketing campaign for a multifamily residential building.
 
 ═══════════════════════════════════════════════════════════════
 BUILDING BRAND
@@ -29,6 +33,16 @@ ${(building.wordsToAvoid ?? []).length > 0 ? `- Words to avoid: ${(building.word
 - Primary Residents: ${building.primaryResidentGroup || 'General residents'}${building.secondaryResidentGroup ? `\n- Secondary Residents: ${building.secondaryResidentGroup}` : ''}
 
 ═══════════════════════════════════════════════════════════════
+MARKETING CORPUS — CAMPAIGN SEQUENCE
+═══════════════════════════════════════════════════════════════
+This campaign follows a proven residential event sequence:
+  PRE-EVENT  → Invitation, interest-building, RSVP drive
+  EVENT-DAY  → Last-minute reminder, what to expect
+  POST-EVENT → Thank you, photo recap, feedback request, next-event teaser
+
+Apply this sequence across all outputs below.
+
+═══════════════════════════════════════════════════════════════
 INSTRUCTIONS — GENERATE A COMPLETE MARKETING PACKAGE
 ═══════════════════════════════════════════════════════════════
 
@@ -36,61 +50,95 @@ Return a JSON object with these exact keys:
 
 ──── SECTION 1: RESIDENT COMMS KIT ────
 
-1. "emailSubjectLines": array of 3 email subject lines (one direct, one curiosity-driven, one benefit-focused)
-2. "emailBody": string, maximum 150 words, warm and inviting tone, include {RSVP_LINK} placeholder
-3. "sms": string, maximum 160 characters, include event name, date, and time
+1. "emailSubjectLines": array of 5 email subject lines (varied approaches):
+   - Direct/informational: "You're invited: {EVENT_NAME} on {DATE}"
+   - Curiosity-driven: builds interest without giving everything away
+   - Benefit-focused: what the resident gets by attending
+   - Urgency/scarcity: spots filling, don't miss out
+   - Personalized/warm: neighbour-to-neighbour tone
 
-──── SECTION 2: MARKETING COPY ────
+2. "emailBody": string, maximum 150 words, warm and inviting tone.
+   Structure: greeting → event overview → what to expect (2-3 bullet points) → CTA with {RSVP_LINK}
 
-4. "posterCopy": object with:
-   - "hook": catchy headline for the poster
-   - "cta": clear call-to-action (e.g., "RSVP today!" or "Save your spot!")
-   - "supportingText": 1-2 sentences of supporting details
+3. "sms": string, maximum 160 characters, include event name, date, time, and {RSVP_LINK}
 
-5. "socialCaptions": array of 3 social media captions for Instagram/Facebook (one casual, one informative, one enthusiastic)
+──── SECTION 2: CAMPAIGN EMAIL SEQUENCE ────
 
-6. "visualPrompt": string describing the ideal poster or social media image (suitable for DALL-E or Canva AI image generation)
+4. "campaignSequence": object with three campaign emails:
 
-7. "colorPalette": array of 3-4 hex colour codes complementing ${building.brandColor ?? '#8F1D23'}
+   a) "invitation": the primary invite sent 7-10 days before. Fields:
+      - "subject": string (invitation subject line)
+      - "body": string (150 words max, warm, clear value prop, CTA with {RSVP_LINK})
 
-8. "iconSuggestions": array of 3-4 relevant icon names (e.g., "coffee-cup", "music-note", "sun")
+   b) "reminder": sent 1-2 days before. Fields:
+      - "subject": string (reminder subject — create urgency without panic)
+      - "body": string (100 words max, confirm details, "Add to Calendar" CTA, what to bring/expect)
 
-──── SECTION 3: DESIGN SPECIFICATIONS ────
+   c) "thankYou": sent 24-48 hours after event. Fields:
+      - "subject": string (appreciation subject, e.g. "Thanks for making {EVENT_NAME} awesome!")
+      - "body": string (100 words max, gratitude + highlights + feedback CTA + teaser for next event)
 
-9. "designSpecs": array of recommended marketing assets, each with:
-   - "format": string (e.g., "Instagram Post", "Email Header", "Flyer 8.5x11", "Facebook Post", "Twitter/X Post", "Website Banner", "Printable PDF Flyer")
-   - "dimensions": string (e.g., "1080x1080px", "600x200px", "8.5x11in")
-   - "headline": string — the headline text for this specific format
-   - "supportingText": string — CTA or body text tailored for this format
-   - "layoutNotes": string — recommended visual layout (text position, focal point, image placement)
-   - "exportFormat": string — recommended export type ("PNG for social", "PDF Print for flyers", "JPG for emails", "MP4/GIF for animated")
+──── SECTION 3: MARKETING COPY ────
 
-   Generate specs for at least these 3 formats:
-   a) Instagram/Facebook Post (1080x1080px) — social sharing
-   b) Email Header (600x200px) — for email campaigns
-   c) Printable Flyer (8.5x11in) — for lobby/elevator posting
+5. "posterCopy": object with:
+   - "hook": catchy headline for the poster (10 words max)
+   - "cta": clear call-to-action from this list of proven CTAs:
+     Reserve Your Spot | RSVP Now | Confirm Your Attendance | Join Us |
+     Sign Up Today | Don't Miss Out | Save Your Seat | Mark Your Calendar
+   - "supportingText": 1-2 sentences of supporting details (date, time, location)
 
-   Optionally include additional formats if relevant to the event type.
+6. "socialCaptions": array of 3 social media captions for Instagram/Facebook:
+   - Casual/friendly: neighbour-to-neighbour tone
+   - Informative: all the details clearly stated
+   - Enthusiastic/hype: gets people excited, uses energy and emojis
+
+7. "visualPrompt": string describing the ideal poster or social media image
+   (suitable for DALL-E or Canva AI image generation — describe mood, colours, people, setting)
+
+8. "colorPalette": array of 3-4 hex colour codes complementing ${building.brandColor ?? '#8F1D23'}
+
+9. "iconSuggestions": array of 3-4 relevant icon names (e.g., "coffee-cup", "music-note", "sun")
+
+──── SECTION 4: DESIGN SPECIFICATIONS ────
+
+10. "designSpecs": array of recommended marketing assets, each with:
+    - "format": string (e.g., "Instagram Post", "Email Header", "Flyer 8.5x11")
+    - "dimensions": string (e.g., "1080x1080px", "600x200px", "8.5x11in")
+    - "headline": string — headline text for this specific format
+    - "supportingText": string — CTA or body text tailored for this format
+    - "layoutNotes": string — recommended visual layout
+    - "exportFormat": string — "PNG for social", "PDF Print for flyers", "JPG for emails"
+
+    Generate specs for these 4 formats:
+    a) Instagram/Facebook Post (1080x1080px)
+    b) Email Header (600x200px)
+    c) Printable Flyer (8.5x11in) — for lobby/elevator/bulletin board
+    d) SMS-Friendly Short Link Card (format note only, no image needed)
 
 ═══════════════════════════════════════════════════════════════
 RULES
 ═══════════════════════════════════════════════════════════════
 - Use Canadian English spelling throughout (colour, centre, neighbourhood, favourite, honour)
 - No PII references — never include real resident names or unit numbers
-- Use these placeholders where appropriate: {BUILDING_NAME}, {EVENT_NAME}, {DATE}, {TIME}, {RSVP_LINK}, {QR_CODE}, {BUILDING_LOGO}
+- Use these placeholders where appropriate:
+  {BUILDING_NAME}, {EVENT_NAME}, {DATE}, {TIME}, {RSVP_LINK}, {QR_CODE}, {BUILDING_LOGO}, {RESIDENT_NAME}
 - Tone must match: ${(building.brandTones ?? []).length > 0 ? (building.brandTones ?? []).join(', ') : 'Professional and welcoming'}
-- Language must be accessible and inclusive
+- Language must be accessible, inclusive, and free of jargon
 - All visuals and layouts should follow Canadian accessibility and branding practices
+- Campaign sequence must feel connected — same voice and event energy across all three emails
 - Return valid JSON only. No markdown fences, no explanation, no extra text.`
 
-  const user = `Generate a complete marketing package for this event:
+  const user = `Generate a complete marketing campaign package for this resident event:
 
 - Event Name: ${event.name}
 - Date: ${event.date}
 - Time: ${event.startTime}${event.endTime ? ` to ${event.endTime}` : ''}
 - Location: ${event.location || 'TBD'}
 - Description: ${event.description || 'No description provided'}
-- Category: ${event.category || 'Community'}`
+- Category: ${event.category || 'Community'}
+- Expected Attendance: ${event.rsvpLimit ? `Up to ${event.rsvpLimit} residents` : 'Open to all residents'}
+
+Generate all sections: Comms Kit (5 email subjects, email body, SMS), Campaign Sequence (invitation, reminder, thank you), Marketing Copy (poster, social, visual), and Design Specs.`
 
   return { system, user }
 }

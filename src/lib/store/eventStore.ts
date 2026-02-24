@@ -7,23 +7,48 @@ import type { EventStatus, RSVPEntry } from '../types/common'
 import { canTransitionStatus } from '../utils/validation'
 
 /**
- * Compute the real-time status of an event.
- * The store saves the last *explicit* status; this function returns
- * the display status by checking the current time against the event date.
+ * Compute the real-time display status of an event.
+ *
+ * The store persists the last *explicit* status set by the user or system.
+ * This function overlays automatic time-based transitions so the UI always
+ * reflects the true lifecycle state without writing back to the store.
+ *
+ * Auto-transition rules:
+ *   scheduled → active        when today's date matches the event date
+ *   scheduled → needs_closeout when the event date has passed (missed window)
+ *   active    → needs_closeout when the event end time has passed
  */
 export function computeEventStatus(event: Event): EventStatus {
   const { status, date, endTime } = event
 
-  // Only auto-transition from scheduled or active
+  // Auto-transition scheduled events based on today's date
   if (status === 'scheduled' && date) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const now = new Date()
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+
     const eventDate = new Date(date + 'T00:00:00')
-    if (eventDate <= today) {
+
+    if (eventDate.getTime() === todayStart.getTime()) {
+      // Event is today — mark as active (until end time passes)
+      if (endTime) {
+        const [hours, minutes] = endTime.split(':').map(Number)
+        const eventEnd = new Date(date + 'T00:00:00')
+        eventEnd.setHours(hours, minutes, 0, 0)
+        if (now > eventEnd) {
+          return 'needs_closeout'
+        }
+      }
       return 'active'
+    }
+
+    if (eventDate < todayStart) {
+      // Event date has fully passed — needs closeout
+      return 'needs_closeout'
     }
   }
 
+  // Auto-transition active events when end time passes
   if (status === 'active' && date && endTime) {
     const now = new Date()
     const [hours, minutes] = endTime.split(':').map(Number)

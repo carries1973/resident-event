@@ -8,6 +8,9 @@
  * The exported PDF uses the building's brand colour for the month header
  * and includes the building logo (if provided). No app branding appears
  * anywhere in the output.
+ *
+ * Page 1: Calendar grid with events (max 2 per cell) and observance names.
+ * Page 2 (legend): All observances with dates + all events with date/time/location.
  */
 
 import { jsPDF } from 'jspdf'
@@ -16,7 +19,19 @@ import { assertExportConfig, getDefaultExportConfig } from './gatekeeper'
 export interface CalendarExportParams {
   year: number
   month: number // 1-12
-  events: Array<{ date: string; name: string; status: string }>
+  events: Array<{
+    date: string
+    name: string
+    status: string
+    startTime?: string
+    endTime?: string
+    location?: string
+  }>
+  observances?: Array<{
+    day?: number
+    name: string
+    month: number
+  }>
   buildingName: string
   brandColor: string // hex, e.g. "#2E8B8B"
   logoUrl?: string // data URL or undefined
@@ -85,6 +100,65 @@ function truncateText(
 }
 
 /**
+ * Format a time string (HH:mm) into 12-hour display (e.g. "10:00 AM").
+ */
+function formatTime(time?: string): string {
+  if (!time) return ''
+  const [h, m] = time.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour = h % 12 || 12
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`
+}
+
+/**
+ * Format a date string (YYYY-MM-DD) into "March 8" display format.
+ */
+function formatDateShort(dateStr: string, year: number): string {
+  const date = new Date(dateStr + 'T00:00:00')
+  const monthName = MONTH_NAMES[date.getMonth()]
+  const day = date.getDate()
+  const dateYear = date.getFullYear()
+  // Only append year if it differs from the calendar year
+  if (dateYear !== year) return `${monthName} ${day}, ${dateYear}`
+  return `${monthName} ${day}`
+}
+
+/**
+ * Draw the branded page header (logo + month/year title).
+ * Returns the x-position where the month text starts (after logo if present).
+ */
+async function drawPageHeader(
+  doc: jsPDF,
+  params: {
+    logoUrl?: string
+    monthName: string
+    year: number
+    margin: number
+    brandRgb: { r: number; g: number; b: number }
+    monthHeaderFontSize: number
+  },
+): Promise<void> {
+  const { logoUrl, monthName, year, margin, brandRgb, monthHeaderFontSize } = params
+  let headerTextX = margin
+
+  if (logoUrl) {
+    try {
+      const logoMaxHeight = 0.5
+      const logoMaxWidth = 0.8
+      doc.addImage(logoUrl, 'PNG', margin, margin, logoMaxWidth, logoMaxHeight)
+      headerTextX = margin + logoMaxWidth + 0.15
+    } catch {
+      headerTextX = margin
+    }
+  }
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(monthHeaderFontSize)
+  doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
+  doc.text(`${monthName} ${year}`, headerTextX, margin + 0.35)
+}
+
+/**
  * Export a monthly calendar as a PDF file.
  *
  * This function:
@@ -92,13 +166,14 @@ function truncateText(
  * 2. Builds a landscape letter-size PDF (11" x 8.5")
  * 3. Draws a branded header with optional logo and month/year
  * 4. Renders day-of-week headers
- * 5. Draws the calendar grid with events (max 2 per cell)
- * 6. Saves the PDF with a building-branded filename
+ * 5. Draws the calendar grid with events (max 2 per cell) and observance names
+ * 6. Adds a legend page listing all observances and all events with details
+ * 7. Saves the PDF with a building-branded filename
  */
 export async function exportCalendarPDF(
   params: CalendarExportParams,
 ): Promise<void> {
-  const { year, month, events, buildingName, brandColor, logoUrl } = params
+  const { year, month, events, observances = [], buildingName, brandColor, logoUrl } = params
   const config = getDefaultExportConfig()
 
   // ── Gatekeeper check ──────────────────────────────────────────────
@@ -119,26 +194,15 @@ export async function exportCalendarPDF(
 
   // ── Header area ───────────────────────────────────────────────────
   const headerHeight = 0.6 // Reserve 0.6" for header
-  let headerTextX = margin
 
-  // Logo (if provided)
-  if (logoUrl) {
-    try {
-      const logoMaxHeight = 0.5 // inches
-      const logoMaxWidth = 0.8 // inches
-      doc.addImage(logoUrl, 'PNG', margin, margin, logoMaxWidth, logoMaxHeight)
-      headerTextX = margin + logoMaxWidth + 0.15
-    } catch {
-      // If logo fails to load, continue without it
-      headerTextX = margin
-    }
-  }
-
-  // Month/Year title: 26pt bold, building brand colour
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(config.fontSize.monthHeader) // 26pt
-  doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
-  doc.text(`${monthName} ${year}`, headerTextX, margin + 0.35)
+  await drawPageHeader(doc, {
+    logoUrl,
+    monthName,
+    year,
+    margin,
+    brandRgb,
+    monthHeaderFontSize: config.fontSize.monthHeader,
+  })
 
   // ── Day-of-week headers ───────────────────────────────────────────
   const gridTop = margin + headerHeight + 0.1
@@ -151,7 +215,6 @@ export async function exportCalendarPDF(
 
   for (let col = 0; col < 7; col++) {
     const x = margin + col * colWidth
-    // Centre the header text within the column
     const textWidth = doc.getTextWidth(DAY_HEADERS[col])
     doc.text(DAY_HEADERS[col], x + (colWidth - textWidth) / 2, gridTop + 0.2)
   }
@@ -166,7 +229,10 @@ export async function exportCalendarPDF(
   const daysInMonth = new Date(year, month, 0).getDate()
 
   // Group events by day number for quick lookup
-  const eventsByDay = new Map<number, Array<{ name: string; status: string }>>()
+  const eventsByDay = new Map<
+    number,
+    Array<{ name: string; status: string; startTime?: string; endTime?: string; location?: string }>
+  >()
   for (const event of events) {
     const eventDate = new Date(event.date + 'T00:00:00')
     if (eventDate.getFullYear() === year && eventDate.getMonth() + 1 === month) {
@@ -174,13 +240,31 @@ export async function exportCalendarPDF(
       if (!eventsByDay.has(day)) {
         eventsByDay.set(day, [])
       }
-      eventsByDay.get(day)!.push({ name: event.name, status: event.status })
+      eventsByDay.get(day)!.push({
+        name: event.name,
+        status: event.status,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+      })
+    }
+  }
+
+  // Group observances by day for quick lookup
+  // day === undefined means month-long — we skip those in the grid (too many cells)
+  const observancesByDay = new Map<number, Array<{ name: string }>>()
+  for (const obs of observances) {
+    if (obs.day != null && obs.month === month) {
+      if (!observancesByDay.has(obs.day)) {
+        observancesByDay.set(obs.day, [])
+      }
+      observancesByDay.get(obs.day)!.push({ name: obs.name })
     }
   }
 
   // Draw cell borders and content
   doc.setDrawColor(0xd0, 0xd0, 0xd0) // #D0D0D0
-  doc.setLineWidth(0.5 / 72) // 0.5pt converted to inches (72pt = 1in)
+  doc.setLineWidth(0.5 / 72) // 0.5pt → inches
 
   for (let row = 0; row < numRows; row++) {
     for (let col = 0; col < 7; col++) {
@@ -201,39 +285,226 @@ export async function exportCalendarPDF(
         doc.setTextColor(0x33, 0x33, 0x33)
         doc.text(String(dayNum), x + 0.05, y + 0.18)
 
-        // Events for this day
+        let contentY = y + 0.32 // cursor below day number
+        const lineH = 0.15 // line height for cell content
+        const maxTextWidth = colWidth - 0.1
+
+        // ── Observances for this day (italic, muted grey, 8.5pt) ─────
+        const dayObservances = observancesByDay.get(dayNum)
+        if (dayObservances && dayObservances.length > 0) {
+          doc.setFont('helvetica', 'italic')
+          doc.setFontSize(8.5) // smaller than event text — visual hierarchy
+          doc.setTextColor(0x77, 0x77, 0x77) // #777777
+
+          const maxObs = 2 // never crowd the cell
+          const displayObs = dayObservances.slice(0, maxObs)
+          for (const obs of displayObs) {
+            const obsText = truncateText(doc, obs.name, maxTextWidth)
+            doc.text(obsText, x + 0.05, contentY)
+            contentY += lineH
+          }
+          if (dayObservances.length > maxObs) {
+            doc.text(`+${dayObservances.length - maxObs} more`, x + 0.05, contentY)
+            contentY += lineH
+          }
+
+          // Add a tiny gap between observances and events
+          contentY += 0.02
+        }
+
+        // ── Events for this day ───────────────────────────────────────
         const dayEvents = eventsByDay.get(dayNum)
         if (dayEvents && dayEvents.length > 0) {
           doc.setFont('helvetica', 'normal')
           doc.setFontSize(config.fontSize.eventText) // 9.5pt
           doc.setTextColor(0x44, 0x44, 0x44) // #444444
 
-          const eventStartY = y + 0.35
-          const eventLineHeight = 0.16
-          const maxTextWidth = colWidth - 0.1 // 0.05" padding on each side
-
           const displayCount = Math.min(dayEvents.length, config.maxEventsPerCell)
 
           for (let i = 0; i < displayCount; i++) {
             const eventName = truncateText(doc, dayEvents[i].name, maxTextWidth)
-            doc.text(eventName, x + 0.05, eventStartY + i * eventLineHeight)
+            doc.text(eventName, x + 0.05, contentY)
+            contentY += lineH
           }
 
           // Overflow indicator
           if (dayEvents.length > config.maxEventsPerCell) {
             const overflow = dayEvents.length - config.maxEventsPerCell
             doc.setFont('helvetica', 'italic')
-            doc.setFontSize(config.fontSize.eventText) // 9.5pt
+            doc.setFontSize(config.fontSize.eventText)
             doc.setTextColor(0x88, 0x88, 0x88) // #888888
-            doc.text(
-              `+${overflow} more`,
-              x + 0.05,
-              eventStartY + displayCount * eventLineHeight,
-            )
+            doc.text(`+${overflow} more`, x + 0.05, contentY)
           }
         }
       }
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // ── PAGE 2: Legend ────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // Only add the legend page if there are observances or events to list.
+  const monthObservances = observances.filter((o) => o.month === month)
+  const monthEvents = events.filter((e) => {
+    const d = new Date(e.date + 'T00:00:00')
+    return d.getFullYear() === year && d.getMonth() + 1 === month
+  })
+
+  if (monthObservances.length > 0 || monthEvents.length > 0) {
+    doc.addPage('letter', 'landscape')
+
+    // ── Legend page header ─────────────────────────────────────────
+    await drawPageHeader(doc, {
+      logoUrl,
+      monthName,
+      year,
+      margin,
+      brandRgb,
+      monthHeaderFontSize: config.fontSize.monthHeader,
+    })
+
+    // Subtitle
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(0x66, 0x66, 0x66)
+    doc.text(`${monthName} ${year} — Observances & Events`, margin, margin + 0.55)
+
+    // Divider line
+    doc.setDrawColor(0xd0, 0xd0, 0xd0)
+    doc.setLineWidth(0.5 / 72)
+    doc.line(margin, margin + 0.65, pageWidth - margin, margin + 0.65)
+
+    // ── Two-column layout ──────────────────────────────────────────
+    const legendTop = margin + 0.8
+    const colGap = 0.3
+    const legendColWidth = (printableWidth - colGap) / 2
+    const leftColX = margin
+    const rightColX = margin + legendColWidth + colGap
+
+    let leftY = legendTop
+    let rightY = legendTop
+
+    const sectionTitleSize = 10
+    const itemFontSize = 9.5
+    const itemLineHeight = 0.2
+    const sectionGap = 0.12
+    const afterSectionGap = 0.08
+
+    // ── LEFT COLUMN: Observances ───────────────────────────────────
+    if (monthObservances.length > 0) {
+      // Section heading
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(sectionTitleSize)
+      doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
+      doc.text('Observances', leftColX, leftY)
+      leftY += sectionGap
+
+      // Thin rule under heading
+      doc.setDrawColor(brandRgb.r, brandRgb.g, brandRgb.b)
+      doc.setLineWidth(0.5 / 72)
+      doc.line(leftColX, leftY, leftColX + legendColWidth, leftY)
+      leftY += afterSectionGap + 0.05
+
+      // Sort observances: day-specific first (by day), then month-long
+      const sorted = [...monthObservances].sort((a, b) => {
+        if (a.day != null && b.day != null) return a.day - b.day
+        if (a.day != null) return -1
+        if (b.day != null) return 1
+        return a.name.localeCompare(b.name)
+      })
+
+      for (const obs of sorted) {
+        // Date label
+        let dateLabel: string
+        if (obs.day != null) {
+          dateLabel = `${monthName} ${obs.day}`
+        } else {
+          dateLabel = `All of ${monthName}` // month-long
+        }
+
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(itemFontSize)
+        doc.setTextColor(0x33, 0x33, 0x33)
+
+        // Date in grey, name in black
+        const dateLabelWidth = doc.getTextWidth(dateLabel + '  ')
+        doc.setTextColor(0x77, 0x77, 0x77)
+        doc.text(dateLabel, leftColX, leftY)
+        doc.setTextColor(0x22, 0x22, 0x22)
+        doc.setFont('helvetica', 'normal')
+        const obsName = truncateText(doc, obs.name, legendColWidth - dateLabelWidth)
+        doc.text(obsName, leftColX + dateLabelWidth, leftY)
+
+        leftY += itemLineHeight
+      }
+    }
+
+    // ── RIGHT COLUMN: Events ───────────────────────────────────────
+    if (monthEvents.length > 0) {
+      // Section heading
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(sectionTitleSize)
+      doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
+      doc.text('Resident Events', rightColX, rightY)
+      rightY += sectionGap
+
+      // Thin rule under heading
+      doc.setDrawColor(brandRgb.r, brandRgb.g, brandRgb.b)
+      doc.setLineWidth(0.5 / 72)
+      doc.line(rightColX, rightY, rightColX + legendColWidth, rightY)
+      rightY += afterSectionGap + 0.05
+
+      // Sort events by date then name
+      const sortedEvents = [...monthEvents].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date)
+        const aTime = a.startTime ?? ''
+        const bTime = b.startTime ?? ''
+        if (aTime !== bTime) return aTime.localeCompare(bTime)
+        return a.name.localeCompare(b.name)
+      })
+
+      for (const event of sortedEvents) {
+        // Event name (bold)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(itemFontSize)
+        doc.setTextColor(0x22, 0x22, 0x22)
+        const eventNameText = truncateText(doc, event.name, legendColWidth)
+        doc.text(eventNameText, rightColX, rightY)
+        rightY += itemLineHeight * 0.85
+
+        // Detail line: date + time + location (smaller, grey)
+        const datePart = formatDateShort(event.date, year)
+        const timePart =
+          event.startTime && event.endTime
+            ? `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`
+            : event.startTime
+              ? formatTime(event.startTime)
+              : ''
+        const locationPart = event.location || ''
+
+        const detailParts = [datePart, timePart, locationPart].filter(Boolean)
+        const detailLine = detailParts.join('  ·  ')
+
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.5)
+        doc.setTextColor(0x66, 0x66, 0x66)
+        const detailText = truncateText(doc, detailLine, legendColWidth)
+        doc.text(detailText, rightColX, rightY)
+        rightY += itemLineHeight + 0.04 // extra gap between events
+      }
+    }
+
+    // ── Footer note ────────────────────────────────────────────────
+    const footerY = pageHeight - margin * 0.6
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(8)
+    doc.setTextColor(0xaa, 0xaa, 0xaa)
+    doc.text(
+      `${buildingName} · ${monthName} ${year} calendar`,
+      pageWidth / 2,
+      footerY,
+      { align: 'center' },
+    )
   }
 
   // ── Save ──────────────────────────────────────────────────────────

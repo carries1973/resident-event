@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Sparkles, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Sparkles, RefreshCw, ChevronDown, ChevronUp, Mail, Bell, Heart } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -214,6 +214,17 @@ export function EventMarketingTab({ event }: EventMarketingTabProps) {
 
       <Separator />
 
+      {/* Campaign sequence section */}
+      {marketing.campaignSequence && (
+        <>
+          <CampaignSequenceSection
+            sequence={marketing.campaignSequence}
+            onRegenerate={() => handleRegenerateSection('campaignSequence')}
+          />
+          <Separator />
+        </>
+      )}
+
       {/* Poster copy section */}
       <PosterCopyGenerator
         marketing={marketing}
@@ -252,6 +263,96 @@ export function EventMarketingTab({ event }: EventMarketingTabProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Campaign sequence component
+// ---------------------------------------------------------------------------
+
+interface CampaignEmail {
+  subject: string
+  body: string
+}
+
+interface CampaignSequenceSectionProps {
+  sequence: {
+    invitation: CampaignEmail
+    reminder: CampaignEmail
+    thankYou: CampaignEmail
+  }
+  onRegenerate: () => void
+}
+
+/** Displays the three-email campaign sequence (Invitation → Reminder → Thank You). */
+function CampaignSequenceSection({ sequence, onRegenerate }: CampaignSequenceSectionProps) {
+  const emails = [
+    {
+      key: 'invitation',
+      label: 'Invitation',
+      timing: 'Send 7–10 days before event',
+      icon: <Mail className="h-4 w-4 text-blue-500" />,
+      data: sequence.invitation,
+    },
+    {
+      key: 'reminder',
+      label: 'Reminder',
+      timing: 'Send 1–2 days before event',
+      icon: <Bell className="h-4 w-4 text-amber-500" />,
+      data: sequence.reminder,
+    },
+    {
+      key: 'thankYou',
+      label: 'Thank You',
+      timing: 'Send 24–48 hours after event',
+      icon: <Heart className="h-4 w-4 text-emerald-500" />,
+      data: sequence.thankYou,
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">Campaign Email Sequence</h3>
+          <p className="text-xs text-text-muted mt-0.5">
+            Three-email lifecycle sequence — Invitation → Reminder → Thank You
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onRegenerate} className="gap-1.5 text-xs">
+          <RefreshCw className="h-3.5 w-3.5" />
+          Regenerate
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-3">
+        {emails.map(({ key, label, timing, icon, data }) => (
+          <div
+            key={key}
+            className="rounded-lg border border-border-default bg-surface p-4 space-y-3"
+          >
+            <div className="flex items-center gap-2">
+              {icon}
+              <div>
+                <p className="text-xs font-semibold text-text-primary">{label}</p>
+                <p className="text-[10px] text-text-muted">{timing}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div>
+                <p className="text-[10px] font-medium text-text-muted uppercase tracking-wide mb-1">Subject</p>
+                <p className="text-xs text-text-primary font-medium leading-relaxed">{data.subject}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-text-muted uppercase tracking-wide mb-1">Body</p>
+                <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-line">{data.body}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -261,6 +362,7 @@ function sectionDisplayName(section: string): string {
     emailSubjectLines: 'email subject lines',
     emailBody: 'email body',
     sms: 'SMS message',
+    campaignSequence: 'campaign sequence',
     posterCopy: 'poster copy',
     socialCaptions: 'social captions',
     visualPrompt: 'visual prompt',

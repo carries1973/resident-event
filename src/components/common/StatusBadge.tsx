@@ -2,21 +2,26 @@ import { Badge } from '@/components/ui/badge'
 import type { EventStatus } from '@/lib/types/common'
 import { cn } from '@/lib/utils'
 
+/**
+ * Visual configuration per status.
+ * active gets a pulsing live dot indicator.
+ */
 const STATUS_CONFIG: Record<
   EventStatus,
-  { label: string; className: string }
+  { label: string; className: string; pulse?: boolean; icon?: string }
 > = {
   draft: {
     label: 'Draft',
-    className: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+    className: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800',
   },
   scheduled: {
     label: 'Scheduled',
     className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800',
   },
   active: {
-    label: 'Active',
-    className: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800',
+    label: 'In Progress',
+    className: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800',
+    pulse: true,
   },
   needs_closeout: {
     label: 'Needs Closeout',
@@ -43,14 +48,21 @@ interface StatusBadgeProps {
 
 /**
  * Maps an EventStatus to a styled Badge with appropriate colour coding.
+ * Active events show a pulsing live indicator dot.
  */
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const config = STATUS_CONFIG[status]
   return (
     <Badge
       variant="outline"
-      className={cn(config.className, 'font-medium', className)}
+      className={cn(config.className, 'font-medium gap-1.5', className)}
     >
+      {config.pulse && (
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500" />
+        </span>
+      )}
       {config.label}
     </Badge>
   )

@@ -25,8 +25,13 @@ export interface MarketingDesignSpec {
   exportFormat: string            // e.g., "PNG for social", "PDF Print for flyers"
 }
 
+export interface CampaignEmail {
+  subject: string
+  body: string
+}
+
 export interface EventMarketing {
-  emailSubjectLines: string[]     // 3 options
+  emailSubjectLines: string[]     // 5 options (varied approaches)
   emailBody: string               // ≤150 words
   sms: string                     // ≤160 chars
   posterCopy: {
@@ -39,6 +44,11 @@ export interface EventMarketing {
   colorPalette: string[]
   iconSuggestions: string[]
   designSpecs?: MarketingDesignSpec[]  // REP v3.3 design specifications
+  campaignSequence?: {            // Full pre→post campaign email sequence
+    invitation: CampaignEmail     // Sent 7-10 days before event
+    reminder: CampaignEmail       // Sent 1-2 days before
+    thankYou: CampaignEmail       // Sent 24-48 hours after
+  }
 }
 
 export interface BudgetEstimate {

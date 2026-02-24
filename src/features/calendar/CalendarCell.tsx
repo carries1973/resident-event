@@ -62,7 +62,7 @@ export function CalendarCell({
         today && 'bg-brand-light/30',
       )}
     >
-      {/* Day number + observance emojis */}
+      {/* Day number */}
       <div className="flex items-start justify-between">
         <span
           className={cn(
@@ -74,27 +74,30 @@ export function CalendarCell({
         >
           {day}
         </span>
-        {observances.length > 0 && (
-          <span className="text-xs leading-5 flex gap-0.5 flex-wrap justify-end max-w-[60%]">
-            {observances.slice(0, 3).map((obs) => (
-              <span
-                key={obs.id}
-                title={obs.name}
-                aria-label={obs.name}
-                role="img"
-                className="cursor-default"
-              >
-                {obs.emoji}
-              </span>
-            ))}
-            {observances.length > 3 && (
-              <span className="text-text-muted text-[10px]">
-                +{observances.length - 3}
-              </span>
-            )}
-          </span>
-        )}
       </div>
+
+      {/* Observances — emoji + name text (readable on screen and in print) */}
+      {observances.length > 0 && (
+        <div className="flex flex-col gap-0.5 mt-0.5">
+          {observances.slice(0, 2).map((obs) => (
+            <div
+              key={obs.id}
+              title={obs.name}
+              className="flex items-center gap-0.5 min-w-0"
+            >
+              <span className="text-[10px] shrink-0 print:hidden">{obs.emoji}</span>
+              <span className="text-[10px] leading-3.5 truncate text-text-muted print:text-black print:font-normal">
+                {obs.name}
+              </span>
+            </div>
+          ))}
+          {observances.length > 2 && (
+            <span className="text-[10px] leading-3.5 text-text-muted italic">
+              +{observances.length - 2} more
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Events */}
       <div className="flex-1 flex flex-col gap-0.5 mt-0.5">
@@ -111,12 +114,12 @@ export function CalendarCell({
             >
               <span
                 className={cn(
-                  'h-1.5 w-1.5 rounded-full shrink-0',
+                  'h-1.5 w-1.5 rounded-full shrink-0 print:hidden',
                   STATUS_DOT_COLOURS[status],
                 )}
               />
               <span className={cn(
-                'text-[11px] sm:text-xs leading-4 truncate',
+                'text-[11px] sm:text-xs leading-4 truncate print:text-black print:font-semibold',
                 isDraft ? 'text-text-muted italic' : 'text-text-secondary',
               )}>
                 {event.name}
@@ -125,7 +128,7 @@ export function CalendarCell({
           )
         })}
         {overflowCount > 0 && (
-          <span className="text-[11px] leading-4 text-text-muted italic">
+          <span className="text-[11px] leading-4 text-text-muted italic print:text-black">
             +{overflowCount} more
           </span>
         )}

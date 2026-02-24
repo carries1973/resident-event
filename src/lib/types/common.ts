@@ -48,7 +48,7 @@ export type RecurrenceType = 'none' | 'weekly' | 'biweekly' | 'monthly'
 /** Valid status transitions — used by validation utilities */
 export const EVENT_STATUS_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
   draft: ['scheduled', 'cancelled'],
-  scheduled: ['active', 'cancelled'],
+  scheduled: ['draft', 'active', 'cancelled'],  // draft = unconfirm
   active: ['needs_closeout'],
   needs_closeout: ['completed'],
   completed: ['archived'],

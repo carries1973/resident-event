@@ -172,6 +172,13 @@ const designSpecSchema = z
 
 export type AiDesignSpec = z.infer<typeof designSpecSchema>
 
+const campaignEmailSchema = z
+  .object({
+    subject: z.string().min(1),
+    body: z.string().min(1),
+  })
+  .passthrough()
+
 export const aiMarketingSchema = z
   .object({
     // Comms Kit
@@ -192,6 +199,15 @@ export const aiMarketingSchema = z
 
     // Design Specifications (REP v3.3)
     designSpecs: z.array(designSpecSchema).default([]),
+
+    // Campaign Email Sequence (pre → event-day → post-event)
+    campaignSequence: z
+      .object({
+        invitation: campaignEmailSchema,
+        reminder: campaignEmailSchema,
+        thankYou: campaignEmailSchema,
+      })
+      .optional(),
   })
   .passthrough()
 

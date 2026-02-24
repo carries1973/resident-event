@@ -5,7 +5,8 @@ import { computeEventStatus } from '@/lib/store/eventStore'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { formatDateShort, formatTime } from '@/lib/utils/dates'
 import type { Event } from '@/lib/types/event'
-import { MapPin, Clock } from 'lucide-react'
+import { MapPin, Clock, Zap, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface EventCardProps {
   event: Event
@@ -16,19 +17,58 @@ export function EventCard({ event }: EventCardProps) {
   const building = useBuildingStore((s) => s.buildings.find((b) => b.id === event.buildingId))
   const displayStatus = computeEventStatus(event)
 
+  const isDraft = displayStatus === 'draft'
+  const isActive = displayStatus === 'active'
+  const isCompleted = displayStatus === 'completed' || displayStatus === 'archived'
+  const isCancelled = displayStatus === 'cancelled'
+
   return (
     <Card
-      className="group cursor-pointer hover:border-brand/30 transition-colors"
+      className={cn(
+        'group cursor-pointer transition-all',
+        // Draft: dashed border, 60% opacity
+        isDraft && 'border-dashed border-gray-300 dark:border-gray-600 opacity-60 hover:opacity-80',
+        // Active: highlighted orange ring + brighter card
+        isActive && 'border-orange-300 ring-1 ring-orange-200 bg-orange-50/30 dark:bg-orange-950/20 dark:border-orange-800 dark:ring-orange-900',
+        // Completed / archived: muted appearance
+        (isCompleted || isCancelled) && 'opacity-60',
+        // Default hover
+        !isDraft && !isActive && 'hover:border-brand/30',
+      )}
       onClick={() => navigate(`/events/${event.id}`)}
     >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold text-text-primary truncate">{event.name}</h3>
+          <h3
+            className={cn(
+              'font-semibold text-text-primary truncate',
+              // Active: slightly bolder appearance
+              isActive && 'text-orange-900 dark:text-orange-100',
+              // Completed: muted
+              isCompleted && 'line-through text-text-muted',
+              isCancelled && 'line-through text-text-muted',
+            )}
+          >
+            {/* Live / Active icon */}
+            {isActive && (
+              <Zap className="inline mr-1 h-3.5 w-3.5 text-orange-500 align-middle" />
+            )}
+            {/* Completed checkmark */}
+            {isCompleted && (
+              <Check className="inline mr-1 h-3.5 w-3.5 text-emerald-500 align-middle" />
+            )}
+            {event.name}
+          </h3>
           <StatusBadge status={displayStatus} />
         </div>
 
         {event.date && (
-          <p className="text-sm text-text-secondary mb-1">
+          <p className={cn(
+            'text-sm mb-1',
+            isActive ? 'text-orange-700 dark:text-orange-300 font-medium' : 'text-text-secondary',
+            (isCompleted || isCancelled) && 'text-text-muted',
+          )}>
+            {isActive && 'TODAY — '}
             {formatDateShort(event.date)}
             {event.startTime && ` at ${formatTime(event.startTime)}`}
           </p>
