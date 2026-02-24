@@ -14,6 +14,7 @@ import {
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { useEventStore } from '@/lib/store/eventStore'
 import { DEFAULT_OBSERVANCES } from '@/lib/data/observances'
+import { formatDate } from '@/lib/utils/dates'
 import type { Observance } from '@/lib/types/observance'
 
 const MAX_RESULTS_PER_GROUP = 5
@@ -136,7 +137,9 @@ export function SearchPalette({ open, onOpenChange }: SearchPaletteProps) {
                   <span className="truncate font-medium">{event.name}</span>
                   {(event.category || event.date) && (
                     <span className="truncate text-xs text-muted-foreground">
-                      {[event.category, event.date].filter(Boolean).join(' \u00B7 ')}
+                      {[event.category, event.date ? formatDate(event.date) : null]
+                        .filter(Boolean)
+                        .join(' \u00B7 ')}
                     </span>
                   )}
                 </div>

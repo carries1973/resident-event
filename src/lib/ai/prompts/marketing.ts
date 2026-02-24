@@ -50,8 +50,13 @@ Return a JSON object with these exact keys:
 
 ──── SECTION 1: RESIDENT COMMS KIT ────
 
+IMPORTANT: Use real values from the event and building data provided — do NOT
+write literal placeholder strings like {BUILDING_NAME} or {EVENT_NAME} in the
+output. The only acceptable placeholders are {RSVP_LINK} (the actual RSVP URL
+will be inserted later) and {QR_CODE} (the printed QR code will be placed here).
+
 1. "emailSubjectLines": array of 5 email subject lines (varied approaches):
-   - Direct/informational: "You're invited: {EVENT_NAME} on {DATE}"
+   - Direct/informational: e.g. "You're invited: [actual event name] on [actual date]"
    - Curiosity-driven: builds interest without giving everything away
    - Benefit-focused: what the resident gets by attending
    - Urgency/scarcity: spots filling, don't miss out
@@ -59,23 +64,24 @@ Return a JSON object with these exact keys:
 
 2. "emailBody": string, maximum 150 words, warm and inviting tone.
    Structure: greeting → event overview → what to expect (2-3 bullet points) → CTA with {RSVP_LINK}
+   Use the real building name and event name in the body text.
 
-3. "sms": string, maximum 160 characters, include event name, date, time, and {RSVP_LINK}
+3. "sms": string, maximum 160 characters, include the real event name, date, time, and {RSVP_LINK}
 
 ──── SECTION 2: CAMPAIGN EMAIL SEQUENCE ────
 
 4. "campaignSequence": object with three campaign emails:
 
    a) "invitation": the primary invite sent 7-10 days before. Fields:
-      - "subject": string (invitation subject line)
-      - "body": string (150 words max, warm, clear value prop, CTA with {RSVP_LINK})
+      - "subject": string (invitation subject line — use real event name)
+      - "body": string (150 words max, warm, clear value prop, CTA with {RSVP_LINK}; use real names)
 
    b) "reminder": sent 1-2 days before. Fields:
-      - "subject": string (reminder subject — create urgency without panic)
+      - "subject": string (reminder subject — create urgency without panic; use real event name)
       - "body": string (100 words max, confirm details, "Add to Calendar" CTA, what to bring/expect)
 
    c) "thankYou": sent 24-48 hours after event. Fields:
-      - "subject": string (appreciation subject, e.g. "Thanks for making {EVENT_NAME} awesome!")
+      - "subject": string (appreciation subject, e.g. "Thanks for making [real event name] awesome!")
       - "body": string (100 words max, gratitude + highlights + feedback CTA + teaser for next event)
 
 ──── SECTION 3: MARKETING COPY ────
@@ -120,8 +126,8 @@ RULES
 ═══════════════════════════════════════════════════════════════
 - Use Canadian English spelling throughout (colour, centre, neighbourhood, favourite, honour)
 - No PII references — never include real resident names or unit numbers
-- Use these placeholders where appropriate:
-  {BUILDING_NAME}, {EVENT_NAME}, {DATE}, {TIME}, {RSVP_LINK}, {QR_CODE}, {BUILDING_LOGO}, {RESIDENT_NAME}
+- Use REAL values (building name, event name, dates, times) directly in the copy — never write literal placeholder tokens like {BUILDING_NAME} or {EVENT_NAME} in the output
+- The ONLY acceptable placeholder tokens in output are {RSVP_LINK} and {QR_CODE}
 - Tone must match: ${(building.brandTones ?? []).length > 0 ? (building.brandTones ?? []).join(', ') : 'Professional and welcoming'}
 - Language must be accessible, inclusive, and free of jargon
 - All visuals and layouts should follow Canadian accessibility and branding practices

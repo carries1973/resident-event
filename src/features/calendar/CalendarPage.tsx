@@ -116,11 +116,16 @@ export function CalendarPage() {
     })
   }, [events, selectedDateISO, statusFilters, buildingFilter])
 
-  // Observances for the selected day
+  // Observances for the selected day (shown in the day drawer).
+  // Themes are internal planning context — excluded from resident-facing views.
+  // Month-long observances (Ramadan, Black History Month, etc.) are shown in
+  // the drawer for every day of that month since they span the whole period.
   const selectedDayObservances = useMemo(() => {
     if (selectedDay === null) return []
     return DEFAULT_OBSERVANCES.filter((obs: Observance) => {
       if (obs.month !== month) return false
+      // Themes are internal — not shown in the calendar at all
+      if (obs.type === 'theme') return false
       if (disabledObservanceIds.includes(obs.id)) return false
       if (
         observanceTypeFilters.length > 0 &&

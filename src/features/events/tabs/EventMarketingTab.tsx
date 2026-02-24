@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Sparkles, RefreshCw, ChevronDown, ChevronUp, Mail, Bell, Heart } from 'lucide-react'
+import { Sparkles, RefreshCw, ChevronDown, ChevronUp, Mail, Bell, Heart, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -202,6 +202,31 @@ export function EventMarketingTab({ event }: EventMarketingTabProps) {
 
       {/* AI disclaimer */}
       <AiDisclaimer contentType="marketing copy" />
+
+      {/* RSVP warning — shown when marketing copy references {RSVP_LINK} but RSVP is not enabled */}
+      {!event.rsvpEnabled && (
+        (() => {
+          const allText = [
+            ...(marketing?.emailSubjectLines ?? []),
+            marketing?.emailBody ?? '',
+            marketing?.sms ?? '',
+            marketing?.campaignSequence?.invitation?.body ?? '',
+            marketing?.campaignSequence?.reminder?.body ?? '',
+          ].join(' ')
+          const hasRsvpLink = /\{RSVP_LINK\}/i.test(allText) || /RSVP link/i.test(allText)
+          return hasRsvpLink ? (
+            <div className="rounded-lg border border-warning/40 bg-warning-light px-4 py-3 flex items-start gap-3">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold text-text-primary">RSVP not enabled for this event</p>
+                <p className="text-text-secondary mt-0.5">
+                  The marketing copy includes an RSVP link, but RSVP is currently turned off. Enable RSVP in the Overview tab before sharing this content, or remove the RSVP references.
+                </p>
+              </div>
+            </div>
+          ) : null
+        })()
+      )}
 
       {/* Error banner (if section regeneration fails while data exists) */}
       {error && (

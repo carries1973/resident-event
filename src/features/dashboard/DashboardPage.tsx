@@ -69,8 +69,16 @@ export function DashboardPage() {
     const sessions = loadQuickIdeasSessions()
     if (sessions.length > 0) {
       const s = sessions[0]
+      // Normalize legacy "surprise me" topic stored before the naming fix
+      const displayTopic =
+        s.topic.toLowerCase() === 'surprise me' ? 'Surprise Mix' : s.topic
+      // Use the top idea names as context instead of the raw session topic
+      const ideaNames = s.ideas.slice(0, 2).map((i) => i.name).join(', ')
+      const contextLabel = ideaNames
+        ? `ideas including "${ideaNames}"`
+        : `"${displayTopic}" ideas`
       return {
-        label: `You have ${s.ideas.length} unsaved idea${s.ideas.length !== 1 ? 's' : ''} from "${s.topic}"`,
+        label: `You have ${s.ideas.length} unsaved ${contextLabel} from your Quick Ideas session.`,
         cta: 'Go to Planner',
         action: () => navigate('/planner'),
       }

@@ -143,11 +143,17 @@ async function drawPageHeader(
 
   if (logoUrl) {
     try {
+      // Auto-detect the image format from the data URL prefix so JPEG logos
+      // don't cause a format mismatch error in jsPDF.
+      const logoFormat = logoUrl.startsWith('data:image/jpeg') ? 'JPEG'
+        : logoUrl.startsWith('data:image/png') ? 'PNG'
+        : 'JPEG' // safe fallback for any other format
       const logoMaxHeight = 0.5
       const logoMaxWidth = 0.8
-      doc.addImage(logoUrl, 'PNG', margin, margin, logoMaxWidth, logoMaxHeight)
+      doc.addImage(logoUrl, logoFormat, margin, margin, logoMaxWidth, logoMaxHeight)
       headerTextX = margin + logoMaxWidth + 0.15
     } catch {
+      // Logo failed to render — continue without it rather than aborting export
       headerTextX = margin
     }
   }

@@ -30,19 +30,23 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
   const [exporting, setExporting] = useState(false)
   const [showObservance, setShowObservance] = useState(true)
 
-  // Find an observance that falls in the same month as the event
+  // Find an observance that falls on the SAME day as the event.
+  // We only badge the poster when there's a clear, same-day connection —
+  // showing a "nearby" observance (e.g. International Women's Day on a March 9
+  // trivia night) creates confusing, misleading poster content.
   const nearbyObservance = useMemo(() => {
     if (!event.date) return null
     const d = new Date(event.date + 'T00:00:00')
     const month = d.getMonth() + 1 // 1-based
     const day = d.getDate()
 
-    // Look for enabled observances within ±7 days of the event date
+    // Only match observances on the exact same day, not "nearby" days
     return DEFAULT_OBSERVANCES.find((obs) => {
       if (!obs.enabled) return false
+      if (obs.type === 'theme') return false // themes are internal, not resident-facing
       if (obs.month !== month) return false
-      if (obs.day === undefined) return true // month-long observance always matches
-      return Math.abs(obs.day - day) <= 7
+      if (obs.day === undefined) return false // skip month-long observances (too broad)
+      return obs.day === day
     }) ?? null
   }, [event.date])
 
@@ -92,15 +96,29 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
 
   async function captureCanvas(): Promise<HTMLCanvasElement | null> {
     if (!posterRef.current) return null
+
+    // Close any active inline editing field before capturing — active inputs
+    // can cause html2canvas to render incorrectly or throw
+    setEditingField(null)
+
+    // Brief delay to let the DOM settle after closing the editing field
+    await new Promise((resolve) => setTimeout(resolve, 80))
+
     try {
       const canvas = await html2canvas(posterRef.current, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#FFFFFF',
+        logging: false,
       })
       return canvas
-    } catch {
-      toast.error('Failed to capture poster. Please try again.')
+    } catch (err) {
+      console.error('[PosterExport] html2canvas failed:', err)
+      toast.error(
+        'Could not capture the poster. Try scrolling the poster into full view and exporting again.',
+        { duration: 6000 }
+      )
       return null
     }
   }

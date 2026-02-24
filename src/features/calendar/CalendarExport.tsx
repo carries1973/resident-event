@@ -14,7 +14,7 @@
  */
 
 import { useState } from 'react'
-import { Download, Printer, ChevronDown } from 'lucide-react'
+import { Download, Printer, ChevronDown, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,6 +23,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { useEventStore } from '@/lib/store/eventStore'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { useAppStore } from '@/lib/store/appStore'
@@ -40,18 +46,27 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
   const currentBuildingId = useAppStore((s) => s.currentBuildingId)
   const disabledObservanceIds = useAppStore((s) => s.disabledObservanceIds)
   const getBuildingById = useBuildingStore((s) => s.getBuildingById)
+  const buildings = useBuildingStore((s) => s.buildings)
   const events = useEventStore((s) => s.events)
 
   const building = currentBuildingId ? getBuildingById(currentBuildingId) : undefined
+  const hasBuildings = buildings.length > 0
+  // Export is disabled if there's no building selected or no buildings at all
+  const exportDisabled = !building || isExporting
 
   async function handleExportPDF() {
     if (!building) {
-      toast.error('Please select a building first to export the calendar.')
+      toast.error(
+        hasBuildings
+          ? 'Select a building from the top bar before exporting.'
+          : 'Add a building first to export a branded calendar.',
+        { duration: 5000 }
+      )
       return
     }
 
     setIsExporting(true)
-    const toastId = toast.loading('Generating calendar PDF...')
+    const toastId = toast.loading('Generating calendar PDF…')
 
     try {
       // Filter events for the selected building and month
@@ -65,9 +80,11 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
         )
       })
 
-      // Filter observances for the current month, excluding ones the user has disabled
+      // Filter observances for the current month, excluding ones the user has
+      // disabled and excluding themes (internal planning context only)
       const monthObservances = DEFAULT_OBSERVANCES.filter((obs) => {
         if (obs.month !== month) return false
+        if (obs.type === 'theme') return false
         if (disabledObservanceIds.includes(obs.id)) return false
         return true
       })
@@ -93,11 +110,12 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
         logoUrl: building.logoUrl,
       })
 
-      toast.success('Calendar PDF exported successfully.', { id: toastId })
+      toast.success('Calendar PDF downloaded successfully.', { id: toastId })
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'An unexpected error occurred.'
-      toast.error(`Export failed: ${message}`, { id: toastId })
+      console.error('[CalendarExport] PDF export failed:', error)
+      toast.error(`Export failed: ${message}`, { id: toastId, duration: 8000 })
     } finally {
       setIsExporting(false)
     }
@@ -105,6 +123,36 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
 
   function handlePrint() {
     window.print()
+  }
+
+  // When no building is selected, show a tooltip-wrapped disabled button
+  if (!building) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                aria-label="Export or print calendar — select a building first"
+                className="gap-1 cursor-not-allowed"
+              >
+                <AlertCircle className="h-4 w-4 text-warning" />
+                Export
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-[200px] text-center">
+            {hasBuildings
+              ? 'Select a building from the top bar to export the calendar'
+              : 'Add a building first to export a branded calendar'}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )
   }
 
   return (
@@ -118,16 +166,19 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
           className="gap-1"
         >
           <Download className="h-4 w-4" />
-          {isExporting ? 'Exporting...' : 'Export'}
+          {isExporting ? 'Exporting…' : 'Export'}
           <ChevronDown className="h-3 w-3 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={handleExportPDF} disabled={isExporting}>
+        <DropdownMenuItem
+          onSelect={handleExportPDF}
+          disabled={exportDisabled}
+        >
           <Download className="mr-2 h-4 w-4" />
           Export as PDF
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handlePrint}>
+        <DropdownMenuItem onSelect={handlePrint}>
           <Printer className="mr-2 h-4 w-4" />
           Print calendar
         </DropdownMenuItem>

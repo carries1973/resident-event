@@ -80,10 +80,12 @@ function BuildingProfileCard({ building }: { building: Building }) {
   const persona = RESIDENT_OPTIONS.find((p) => p.id === building.primaryResidentGroup)
   const allAmenities = [...(building.amenities ?? []), ...(building.customAmenities ?? [])]
 
+  // Use a positive progression of colours — never danger red for a completeness bar
+  // (red is alarming and looks like a broken element; amber communicates "needs work")
   const completionColour =
-    pct >= 80 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-danger'
+    pct >= 80 ? 'text-success' : 'text-warning'
   const barColour =
-    pct >= 80 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-danger'
+    pct >= 80 ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-primary'
 
   return (
     <Card className="overflow-hidden">

@@ -130,13 +130,21 @@ export function BuildingFormPage() {
     setErrors([])
 
     if (isEditing && id) {
-      updateBuilding(id, { ...form, updatedAt: new Date().toISOString() })
+      // Normalize city capitalization on save (title-case each word)
+      const normalizedCity = form.city
+        .trim()
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+      updateBuilding(id, { ...form, city: normalizedCity, updatedAt: new Date().toISOString() })
       toast.success(`"${form.name}" updated`)
     } else {
+      // Normalize city capitalization on save (title-case each word)
+      const normalizedCity = form.city
+        .trim()
+        .replace(/\b\w/g, (c) => c.toUpperCase())
       const building = createBuilding({
         ...form,
         name: form.name.trim(),
-        city: form.city.trim(),
+        city: normalizedCity,
       })
       setCurrentBuildingId(building.id)
       toast.success(`"${building.name}" created`)

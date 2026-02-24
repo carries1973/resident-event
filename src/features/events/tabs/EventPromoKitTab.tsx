@@ -77,17 +77,27 @@ async function triggerUnsplashDownload(downloadLocation: string): Promise<void> 
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Replace any placeholder tokens the AI may have left in the copy with real
+ * values. This is a safety net — the AI prompt tells it to use real values,
+ * but this ensures any stray tokens in previously-generated or edge-case
+ * content are still resolved before display and copy-paste.
+ */
 function fillPlaceholders(text: string, event: Event, buildingName: string): string {
+  const timeStr =
+    event.startTime && event.endTime
+      ? `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`
+      : event.startTime
+        ? formatTime(event.startTime)
+        : 'TBD'
+
   return text
     .replace(/\{BUILDING_NAME\}/gi, buildingName)
     .replace(/\{EVENT_NAME\}/gi, event.name)
     .replace(/\{DATE\}/gi, event.date ? formatDate(event.date) : 'TBD')
-    .replace(/\{TIME\}/gi,
-      event.startTime && event.endTime
-        ? `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`
-        : event.startTime ? formatTime(event.startTime) : 'TBD'
-    )
-    .replace(/\{RSVP_LINK\}/gi, '[RSVP link]')
+    .replace(/\{TIME\}/gi, timeStr)
+    .replace(/\{RESIDENT_NAME\}/gi, 'Neighbour')
+    .replace(/\{RSVP_LINK\}/gi, '[RSVP link — insert your link here]')
     .replace(/\{QR_CODE\}/gi, '[QR code]')
     .replace(/\{BUILDING_LOGO\}/gi, '[building logo]')
 }
@@ -190,19 +200,26 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
   const [unsplashLoading, setUnsplashLoading] = useState(false)
   const socialImageRef = useRef<HTMLImageElement>(null)
 
-  // Local editable copies of the three blocks (synced from event.marketing)
-  const [emailSubject, setEmailSubject] = useState(
-    event.marketing?.emailSubjectLines?.[0] ?? ''
-  )
-  const [emailBody, setEmailBody] = useState(event.marketing?.emailBody ?? '')
-  const [smsText, setSmsText] = useState(event.marketing?.sms ?? '')
-  const [socialCaption, setSocialCaption] = useState(
-    event.marketing?.socialCaptions?.[0] ?? ''
-  )
-
   const buildingName = building?.name ?? 'your building'
 
-  // Fill placeholders on rendered values (used for PDF/export and display)
+  // Local editable copies of the three blocks (synced from event.marketing).
+  // Placeholder tokens are resolved immediately on init so users see real values
+  // and copy-paste ready text rather than raw {BUILDING_NAME} tokens.
+  const [emailSubject, setEmailSubject] = useState(() =>
+    fillPlaceholders(event.marketing?.emailSubjectLines?.[0] ?? '', event, buildingName)
+  )
+  const [emailBody, setEmailBody] = useState(() =>
+    fillPlaceholders(event.marketing?.emailBody ?? '', event, buildingName)
+  )
+  const [smsText, setSmsText] = useState(() =>
+    fillPlaceholders(event.marketing?.sms ?? '', event, buildingName)
+  )
+  const [socialCaption, setSocialCaption] = useState(() =>
+    fillPlaceholders(event.marketing?.socialCaptions?.[0] ?? '', event, buildingName)
+  )
+
+  // Fill placeholders for PDF/export (these use already-filled state, but
+  // run through the filler again as a safety net for any stale tokens)
   const filledEmailSubject = fillPlaceholders(emailSubject, event, buildingName)
   const filledEmailBody = fillPlaceholders(emailBody, event, buildingName)
 
@@ -217,10 +234,11 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
       if (!parsed.success) { toast.error('Generation failed.'); return }
       const m = parsed.data as EventMarketing
       updateEvent(event.id, { marketing: m })
-      setEmailSubject(m.emailSubjectLines?.[0] ?? '')
-      setEmailBody(m.emailBody ?? '')
-      setSmsText(m.sms ?? '')
-      setSocialCaption(m.socialCaptions?.[0] ?? '')
+      // Apply placeholder substitution so the editable fields show real values
+      setEmailSubject(fillPlaceholders(m.emailSubjectLines?.[0] ?? '', event, buildingName))
+      setEmailBody(fillPlaceholders(m.emailBody ?? '', event, buildingName))
+      setSmsText(fillPlaceholders(m.sms ?? '', event, buildingName))
+      setSocialCaption(fillPlaceholders(m.socialCaptions?.[0] ?? '', event, buildingName))
       toast.success('Promo kit generated')
     } catch (err) {
       toast.error(err instanceof AiError ? err.message : 'Generation failed. Please try again.')
@@ -232,7 +250,8 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
   // ── Fetch Unsplash image ──
   const handleFetchImage = useCallback(async () => {
     if (!UNSPLASH_KEY) {
-      toast.error('Add VITE_UNSPLASH_ACCESS_KEY to your .env file to enable Unsplash images.')
+      // Stock photo integration is not configured — show a user-friendly message
+      toast.info('Stock photo integration is not available in this version.')
       return
     }
     setUnsplashLoading(true)
@@ -438,7 +457,7 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
           )}
           {!unsplashLoading && !unsplashPhoto && !UNSPLASH_KEY && (
             <div className="bg-surface-hover px-4 py-3 text-xs text-text-muted border-b border-border-default">
-              Add <code className="font-mono bg-page px-1 rounded">VITE_UNSPLASH_ACCESS_KEY</code> to your .env to enable stock photos.
+              Click "Get Image" to search for a stock photo to pair with your caption.
             </div>
           )}
           {!unsplashLoading && !unsplashPhoto && UNSPLASH_KEY && (

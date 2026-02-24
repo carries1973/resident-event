@@ -69,6 +69,7 @@ export function TopBar({ onSearchOpen, onMobileMenuOpen }: TopBarProps) {
         size="icon"
         onClick={toggleTheme}
         aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        className="text-text-primary hover:text-text-primary"
       >
         {theme === 'light' ? (
           <Moon className="h-5 w-5" />

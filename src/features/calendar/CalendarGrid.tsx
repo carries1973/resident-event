@@ -66,11 +66,15 @@ export function CalendarGrid({
     return map
   }, [monthEvents])
 
-  // Filter observances for this month
+  // Filter observances for this month.
+  // Themes are internal planning context — excluded from the calendar grid.
   const monthObservances = useMemo(() => {
     return DEFAULT_OBSERVANCES.filter((obs: Observance) => {
       // Must be in this month
       if (obs.month !== month) return false
+
+      // Themes are internal planning prompts — don't show in calendar cells
+      if (obs.type === 'theme') return false
 
       // Not disabled by user
       if (disabledObservanceIds.includes(obs.id)) return false
@@ -84,7 +88,10 @@ export function CalendarGrid({
     })
   }, [month, disabledObservanceIds, observanceTypeFilters])
 
-  // Index observances by day (month-long observances go on every day)
+  // Index observances by day.
+  // Month-long observances (no `day`) appear only on day 1 of the month —
+  // showing them on every cell (e.g. 30 days of "Ramadan") clutters the grid.
+  // The full month indicator is still visible in the day drawer on any day.
   const getObservancesForDay = useMemo(() => {
     const daySpecific = new Map<number, Observance[]>()
     const monthLong: Observance[] = []
@@ -101,7 +108,10 @@ export function CalendarGrid({
 
     return (day: number): Observance[] => {
       const specific = daySpecific.get(day) ?? []
-      return [...specific, ...monthLong]
+      // Month-long observances only appear on day 1 to avoid repeating
+      // them across every cell for the whole month
+      const long = day === 1 ? monthLong : []
+      return [...specific, ...long]
     }
   }, [monthObservances])
 

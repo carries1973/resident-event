@@ -135,10 +135,13 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
 
   const handleResumeSession = (session: QuickIdeasSession) => {
     setIdeas(session.ideas)
-    // Clear topic if it was a "Surprise Mix" session (auto-named), otherwise restore it
-    setTopic(session.topic.startsWith('Surprise Mix') ? '' : session.topic)
+    // Clear topic for "Surprise Mix" or raw "surprise me" sessions; restore otherwise
+    const isSurprise = session.topic.startsWith('Surprise Mix') || session.topic.toLowerCase() === 'surprise me'
+    setTopic(isSurprise ? '' : session.topic)
     setError(null)
-    toast.success(`Resumed: ${session.topic}`)
+    // Show a brief toast — give it a unique id so it won't stack if clicked quickly
+    const displayName = isSurprise ? 'Surprise Mix' : session.topic
+    toast.success(`Session loaded: ${displayName}`, { id: 'resume-session', duration: 2500 })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -344,7 +347,8 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
                     onClick={() => toggleSession(session.id)}
                   >
                     <p className="text-sm font-medium text-text-primary truncate">
-                      {session.topic}
+                      {/* Normalize legacy "surprise me" sessions stored before the naming fix */}
+                      {session.topic.toLowerCase() === 'surprise me' ? 'Surprise Mix' : session.topic}
                     </p>
                     <p className="text-xs text-text-muted">
                       {session.building} &middot; {formatSessionDate(session.createdAt)} &middot;{' '}
