@@ -12,7 +12,7 @@
  *   Print PDF      8.5×11"     (letter portrait via jsPDF)
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   ImageIcon,
   Search,
@@ -37,8 +37,8 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { useBuildingStore } from '@/lib/store/buildingStore'
-import { useEventStore } from '@/lib/store/eventStore'
+import { useBuildingStore, useBuildingStoreHydrated } from '@/lib/store/buildingStore'
+import { useEventStore, useEventStoreHydrated } from '@/lib/store/eventStore'
 import { useAppStore } from '@/lib/store/appStore'
 import { formatDate, formatTime } from '@/lib/utils/dates'
 import {
@@ -61,14 +61,24 @@ type PageStep = 'browse' | 'compose' | 'export'
 // ── Page ──────────────────────────────────────────────────────────
 
 export function PosterTemplatesPage() {
-  const buildings        = useBuildingStore((s) => s.buildings)
-  const events           = useEventStore((s) => s.events)
+  const buildings         = useBuildingStore((s) => s.buildings)
+  const events            = useEventStore((s) => s.events)
   const currentBuildingId = useAppStore((s) => s.currentBuildingId)
+  const buildingsHydrated = useBuildingStoreHydrated()
+  const eventsHydrated    = useEventStoreHydrated()
+  const hydrated          = buildingsHydrated && eventsHydrated
 
-  // Selected building (default to current or first)
-  const [buildingId, setBuildingId] = useState<string>(
-    currentBuildingId ?? buildings[0]?.id ?? '',
-  )
+  // Selected building — starts empty, then resolves once stores rehydrate
+  const [buildingId, setBuildingId] = useState<string>('')
+
+  // Once stores have rehydrated, set the building from currentBuildingId or first building
+  useEffect(() => {
+    if (!hydrated) return
+    if (buildingId) return // already set — don't override user's selection
+    const resolved = currentBuildingId ?? buildings[0]?.id ?? ''
+    if (resolved) setBuildingId(resolved)
+  }, [hydrated, currentBuildingId, buildings, buildingId])
+
   const building = buildings.find((b) => b.id === buildingId)
 
   // Filter state
@@ -94,9 +104,13 @@ export function PosterTemplatesPage() {
       : searchPosterTemplates(search).filter((t) => t.category === category)
   )
 
-  // Events for the selected building
+  // Events for the selected building — all non-archived, non-cancelled statuses
+  // (draft events are included so property managers can prep posters before scheduling)
   const buildingEvents = events.filter(
-    (e) => e.buildingId === buildingId && e.status !== 'archived' && e.status !== 'cancelled',
+    (e) =>
+      e.buildingId === buildingId &&
+      e.status !== 'archived' &&
+      e.status !== 'cancelled',
   )
 
   const selectedEvent: Event | undefined = buildingEvents.find((e) => e.id === selectedEventId)
@@ -223,28 +237,42 @@ export function PosterTemplatesPage() {
         )}
       </div>
 
-      {/* Building selector */}
-      {buildings.length > 1 && step === 'browse' && (
+      {/* Building selector — always visible so user knows which building is active */}
+      {step === 'browse' && (
         <div className="flex items-center gap-3">
           <label className="text-sm font-medium text-text-primary shrink-0">Building</label>
-          <Select value={buildingId} onValueChange={setBuildingId}>
-            <SelectTrigger className="w-[240px]">
-              <SelectValue placeholder="Select building" />
-            </SelectTrigger>
-            <SelectContent>
-              {buildings.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-3 w-3 rounded-sm shrink-0"
-                      style={{ backgroundColor: b.brandColor }}
-                    />
-                    {b.name}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!hydrated ? (
+            <div className="h-9 w-[240px] animate-pulse rounded-md bg-muted" />
+          ) : buildings.length === 0 ? (
+            <span className="text-sm text-text-muted">
+              No buildings yet.{' '}
+              <a href="/buildings/new" className="text-accent-primary underline underline-offset-2">
+                Add one →
+              </a>
+            </span>
+          ) : (
+            <Select value={buildingId} onValueChange={(id) => {
+              setBuildingId(id)
+              setSelectedEventId('') // clear event selection when switching buildings
+            }}>
+              <SelectTrigger className="w-[260px]">
+                <SelectValue placeholder="Select building" />
+              </SelectTrigger>
+              <SelectContent>
+                {buildings.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-3 w-3 rounded-sm shrink-0"
+                        style={{ backgroundColor: b.brandColor }}
+                      />
+                      {b.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       )}
 

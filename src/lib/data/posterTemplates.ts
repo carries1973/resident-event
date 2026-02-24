@@ -1,25 +1,25 @@
 /**
  * Poster Template Registry
  *
- * Each template is a 1080×1400px PNG stored in /public/poster-templates/.
+ * Each template is a PNG stored in /public/poster-templates/.
  * The app overlays dynamic content (logo, event name, date, location, CTA, QR)
  * at the pixel coordinates defined in each template's `zones` map.
  *
- * Safe-zone layout (all Y values are at 1080×1400 resolution):
+ * Safe-zone layout (all Y values at 1080×1400 resolution):
  *   Logo zone:        top-center, Y 60–200px
  *   Event name:       Y 460–720px  (large hero text, 2 lines max)
  *   Date/time:        Y 760–880px
  *   Location:         Y 890–980px
  *   CTA text:         Y 1040–1140px
- *   QR code:          Y 1170–1310px  (right-aligned, 140×140px)
+ *   QR code:          Y 1170–1310px  (right quarter, 140×140px)
  *   Building name:    Y 1330–1370px  (footer)
  *
- * Output formats produced from each 1080×1400 base:
+ * Output formats from each 1080×1400 base:
  *   - Instagram portrait  1080×1400px (as-is)
- *   - Facebook post       1080×1400px (as-is, Facebook supports any portrait)
+ *   - Facebook post       1080×1400px (as-is)
  *   - Print PDF           scaled to 8.5×11" portrait (letter)
  *   - Email header        top 40% crop → 1080×560px
- *   - Instagram square    centre crop → 1080×1080px (Y 160–1240)
+ *   - Instagram square    centre crop → 1080×1080px
  */
 
 export interface PosterTemplateZone {
@@ -36,19 +36,12 @@ export interface PosterTemplateZone {
 }
 
 export interface PosterTemplateZones {
-  /** Building logo (image) */
   logo: PosterTemplateZone
-  /** Main event name (large hero text) */
   eventName: PosterTemplateZone
-  /** Date + time string */
   dateTime: PosterTemplateZone
-  /** Location / venue */
   location: PosterTemplateZone
-  /** Call-to-action text */
   cta: PosterTemplateZone
-  /** QR code placeholder (image) */
   qr: PosterTemplateZone
-  /** Building name footer */
   buildingName: PosterTemplateZone
 }
 
@@ -56,17 +49,14 @@ export interface PosterTemplate {
   id: string
   name: string
   category: PosterCategory
-  /** Path relative to /public */
+  /** Path relative to /public — matches the exact filename the user dropped in */
   imagePath: string
-  /** Thumbnail path for the browser grid */
+  /** Thumbnail shown in the browse grid (same PNG — browser scales it down) */
   thumbnailPath: string
-  /** Pixel coordinates for each dynamic zone */
   zones: PosterTemplateZones
-  /** Dominant overlay text colour (light or dark depending on artwork) */
+  /** Whether to use light or dark text overlays depending on artwork darkness */
   overlayScheme: 'light' | 'dark'
-  /** Tags for search/filter */
   tags: string[]
-  /** Short description shown in the browser */
   description: string
 }
 
@@ -78,6 +68,8 @@ export type PosterCategory =
   | 'community'
   | 'seasonal'
   | 'social'
+  | 'food-drink'
+  | 'family'
 
 export interface PosterCategoryMeta {
   id: PosterCategory
@@ -91,17 +83,19 @@ export const POSTER_CATEGORIES: PosterCategoryMeta[] = [
   { id: 'wellness',     label: 'Wellness',        emoji: '🧘' },
   { id: 'game-night',   label: 'Game Night',      emoji: '🎮' },
   { id: 'community',    label: 'Community',       emoji: '🏠' },
-  { id: 'seasonal',     label: 'Seasonal',        emoji: '🍂' },
+  { id: 'seasonal',     label: 'Seasonal',        emoji: '🌸' },
   { id: 'social',       label: 'Social',          emoji: '🥂' },
+  { id: 'food-drink',   label: 'Food & Drink',    emoji: '🍕' },
+  { id: 'family',       label: 'Family',          emoji: '🌿' },
 ]
 
 /**
- * Default safe-zone layout used by all standard templates.
- * Templates that need different positioning override individual zones.
+ * Default safe-zone layout shared across all templates.
+ * Individual templates can override specific zones as needed.
  */
 const DEFAULT_ZONES: PosterTemplateZones = {
   logo: {
-    x: 540,     // horizontal centre
+    x: 540,
     y: 70,
     maxWidth: 320,
     maxHeight: 130,
@@ -132,7 +126,7 @@ const DEFAULT_ZONES: PosterTemplateZones = {
     align: 'center',
   },
   qr: {
-    x: 878,     // right zone: 878 + 140/2 = 948 → right quarter
+    x: 878,
     y: 1180,
     maxWidth: 140,
     maxHeight: 140,
@@ -145,92 +139,156 @@ const DEFAULT_ZONES: PosterTemplateZones = {
   },
 }
 
+/**
+ * All 12 templates registered with their exact filenames as dropped into
+ * /public/poster-templates/ by the user.
+ */
 export const POSTER_TEMPLATES: PosterTemplate[] = [
   {
     id: 'movie-night',
     name: 'Movie Night',
     category: 'movie-night',
-    imagePath: '/poster-templates/movie-night.png',
-    thumbnailPath: '/poster-templates/thumbs/movie-night.jpg',
-    zones: {
-      ...DEFAULT_ZONES,
-      eventName: { ...DEFAULT_ZONES.eventName, y: 500 },
-    },
+    imagePath: '/poster-templates/Movei Night.png',
+    thumbnailPath: '/poster-templates/Movei Night.png',
+    zones: { ...DEFAULT_ZONES },
     overlayScheme: 'light',
-    tags: ['movies', 'film', 'entertainment', 'evening', 'social'],
-    description: 'Popcorn & film vibes. Perfect for rooftop or lounge screenings.',
+    tags: ['movies', 'film', 'screening', 'entertainment', 'evening', 'popcorn'],
+    description: 'Perfect for rooftop or lounge film screenings.',
   },
   {
-    id: 'bbq-outdoor',
-    name: 'BBQ & Outdoor',
+    id: 'bbq',
+    name: 'BBQ',
     category: 'bbq-outdoor',
-    imagePath: '/poster-templates/bbq.png',
-    thumbnailPath: '/poster-templates/thumbs/bbq.jpg',
-    zones: {
-      ...DEFAULT_ZONES,
-      logo: { ...DEFAULT_ZONES.logo, y: 60 },
-      eventName: { ...DEFAULT_ZONES.eventName, y: 490 },
-    },
+    imagePath: '/poster-templates/BBQ.png',
+    thumbnailPath: '/poster-templates/BBQ.png',
+    zones: { ...DEFAULT_ZONES },
     overlayScheme: 'light',
-    tags: ['bbq', 'outdoor', 'summer', 'grill', 'patio', 'food'],
+    tags: ['bbq', 'grill', 'outdoor', 'summer', 'patio', 'food', 'cookout'],
     description: 'Summer cookout energy. Ideal for patio, rooftop, or courtyard events.',
   },
   {
-    id: 'wellness',
-    name: 'Wellness & Balance',
-    category: 'wellness',
-    imagePath: '/poster-templates/wellness.png',
-    thumbnailPath: '/poster-templates/thumbs/wellness.jpg',
-    zones: {
-      ...DEFAULT_ZONES,
-      logo: { ...DEFAULT_ZONES.logo, y: 80 },
-      eventName: { ...DEFAULT_ZONES.eventName, y: 500 },
-    },
+    id: 'book-club',
+    name: 'Book Club',
+    category: 'community',
+    imagePath: '/poster-templates/Book Club.png',
+    thumbnailPath: '/poster-templates/Book Club.png',
+    zones: { ...DEFAULT_ZONES },
     overlayScheme: 'dark',
-    tags: ['wellness', 'yoga', 'fitness', 'health', 'mindfulness', 'morning'],
-    description: 'Calm and focused. Great for yoga, meditation, or fitness events.',
+    tags: ['book club', 'reading', 'learning', 'discussion', 'community', 'social'],
+    description: 'Cozy and inviting. Great for book clubs and discussion groups.',
+  },
+  {
+    id: 'cinco-de-mayo',
+    name: 'Cinco de Mayo Party',
+    category: 'seasonal',
+    imagePath: '/poster-templates/Cinco De Mayo Party.png',
+    thumbnailPath: '/poster-templates/Cinco De Mayo Party.png',
+    zones: { ...DEFAULT_ZONES },
+    overlayScheme: 'light',
+    tags: ['cinco de mayo', 'fiesta', 'party', 'seasonal', 'celebration', 'cultural'],
+    description: 'Festive and vibrant. Perfect for cultural celebrations and themed parties.',
+  },
+  {
+    id: 'coffee-event',
+    name: 'Coffee Event',
+    category: 'social',
+    imagePath: '/poster-templates/Coffee Event.png',
+    thumbnailPath: '/poster-templates/Coffee Event.png',
+    zones: { ...DEFAULT_ZONES },
+    overlayScheme: 'dark',
+    tags: ['coffee', 'morning', 'social', 'meet and greet', 'neighbours', 'casual'],
+    description: 'Warm and welcoming. Great for morning coffee socials and meet-and-greets.',
+  },
+  {
+    id: 'food-truck',
+    name: 'Food Truck',
+    category: 'food-drink',
+    imagePath: '/poster-templates/Food Truck.png',
+    thumbnailPath: '/poster-templates/Food Truck.png',
+    zones: { ...DEFAULT_ZONES },
+    overlayScheme: 'light',
+    tags: ['food truck', 'food', 'outdoor', 'vendors', 'community', 'lunch'],
+    description: 'Fun and casual. Perfect for food truck pop-ups and outdoor dining events.',
   },
   {
     id: 'game-night',
     name: 'Game Night',
     category: 'game-night',
-    imagePath: '/poster-templates/game-night.png',
-    thumbnailPath: '/poster-templates/thumbs/game-night.jpg',
-    zones: {
-      ...DEFAULT_ZONES,
-      eventName: { ...DEFAULT_ZONES.eventName, y: 510 },
-      cta: { ...DEFAULT_ZONES.cta, y: 1050 },
-    },
+    imagePath: '/poster-templates/Game Night.png',
+    thumbnailPath: '/poster-templates/Game Night.png',
+    zones: { ...DEFAULT_ZONES, eventName: { ...DEFAULT_ZONES.eventName, y: 510 } },
     overlayScheme: 'light',
-    tags: ['games', 'trivia', 'board games', 'social', 'evening', 'fun'],
+    tags: ['games', 'trivia', 'board games', 'social', 'evening', 'fun', 'tournament'],
     description: 'Bold and playful. Perfect for trivia, board game nights, or tournaments.',
   },
   {
-    id: 'community',
-    name: 'Community Gathering',
-    category: 'community',
-    imagePath: '/poster-templates/community.png',
-    thumbnailPath: '/poster-templates/thumbs/community.jpg',
-    zones: {
-      ...DEFAULT_ZONES,
-    },
+    id: 'garden-club',
+    name: 'Garden Club',
+    category: 'family',
+    imagePath: '/poster-templates/Garden Club.png',
+    thumbnailPath: '/poster-templates/Garden Club.png',
+    zones: { ...DEFAULT_ZONES },
     overlayScheme: 'dark',
-    tags: ['community', 'meetup', 'social', 'neighbours', 'gathering', 'general'],
-    description: 'Warm and welcoming. A versatile template for any community event.',
+    tags: ['garden', 'plants', 'nature', 'outdoor', 'wellness', 'family', 'spring'],
+    description: 'Fresh and natural. Ideal for gardening, plant swaps, and outdoor events.',
+  },
+  {
+    id: 'mothers-day',
+    name: "Mother's Day",
+    category: 'seasonal',
+    imagePath: '/poster-templates/Mothers Day.png',
+    thumbnailPath: '/poster-templates/Mothers Day.png',
+    zones: { ...DEFAULT_ZONES },
+    overlayScheme: 'light',
+    tags: ["mother's day", 'mothers', 'spring', 'celebration', 'family', 'appreciation'],
+    description: "Elegant and heartfelt. Perfect for Mother's Day and appreciation events.",
+  },
+  {
+    id: 'pet-appreciation',
+    name: 'Pet Appreciation',
+    category: 'community',
+    imagePath: '/poster-templates/Pet Appreciation.png',
+    thumbnailPath: '/poster-templates/Pet Appreciation.png',
+    zones: { ...DEFAULT_ZONES },
+    overlayScheme: 'light',
+    tags: ['pets', 'dogs', 'cats', 'community', 'fun', 'family', 'social'],
+    description: 'Fun and friendly. Great for pet meetups and animal appreciation events.',
+  },
+  {
+    id: 'pizza-party',
+    name: 'Pizza Party',
+    category: 'food-drink',
+    imagePath: '/poster-templates/Pizza Party.png',
+    thumbnailPath: '/poster-templates/Pizza Party.png',
+    zones: { ...DEFAULT_ZONES },
+    overlayScheme: 'light',
+    tags: ['pizza', 'party', 'food', 'social', 'casual', 'fun', 'neighbours'],
+    description: 'Casual and fun. Perfect for resident pizza nights and casual socials.',
+  },
+  {
+    id: 'pool-party',
+    name: 'Pool Party',
+    category: 'bbq-outdoor',
+    imagePath: '/poster-templates/Pool Party.png',
+    thumbnailPath: '/poster-templates/Pool Party.png',
+    zones: { ...DEFAULT_ZONES },
+    overlayScheme: 'light',
+    tags: ['pool', 'summer', 'outdoor', 'party', 'swimming', 'social', 'hot weather'],
+    description: 'Cool and vibrant. Ideal for summer pool parties and outdoor water events.',
   },
 ]
 
-/** Utility: find a template by ID */
+/** Find a template by ID */
 export function getPosterTemplateById(id: string): PosterTemplate | undefined {
   return POSTER_TEMPLATES.find((t) => t.id === id)
 }
 
-/** Utility: filter templates by category */
+/** Filter templates by category */
 export function getPosterTemplatesByCategory(category: PosterCategory): PosterTemplate[] {
   return POSTER_TEMPLATES.filter((t) => t.category === category)
 }
 
-/** Utility: search templates by tags or name */
+/** Search templates by name, description, or tags */
 export function searchPosterTemplates(query: string): PosterTemplate[] {
   const q = query.toLowerCase().trim()
   if (!q) return POSTER_TEMPLATES
