@@ -267,7 +267,9 @@ export function PlannerIntake({
     building.customAmenities.length === 0 &&
     !building.primaryResidentGroup
 
-  const canProceed = state.startDate !== '' && state.endDate !== ''
+  // Both buttons need a valid date range; hint text shown when not yet selected
+  const canNext = state.startDate !== '' && state.endDate !== ''
+  const canSkip = canNext
 
   // Presets built once per render — same pure function used for both display
   // and active-state comparison, so strings always match.
@@ -323,7 +325,7 @@ export function PlannerIntake({
   }
 
   function handleSkip() {
-    if (!canProceed) return
+    if (!canSkip) return
     dispatch({
       type: 'SET_INTAKE',
       buildingId: building.id,
@@ -402,7 +404,7 @@ export function PlannerIntake({
                 pickerOpen
                   ? 'border-accent-primary ring-1 ring-accent-primary'
                   : 'border-border-default hover:border-accent-primary/60'
-              } ${canProceed ? 'text-text-primary' : 'text-text-muted'}`}
+              } ${canNext ? 'text-text-primary' : 'text-text-muted'}`}
             >
               <Calendar className="h-4 w-4 shrink-0 text-text-muted" />
               <span className="flex-1 truncate">
@@ -529,24 +531,33 @@ export function PlannerIntake({
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-col-reverse sm:flex-row items-center gap-3 pt-2">
-          <Button
-            variant="outline"
-            onClick={handleSkip}
-            disabled={!canProceed}
-            className="w-full sm:w-auto gap-2"
-          >
-            <Zap className="h-4 w-4" />
-            Skip &amp; Generate
-          </Button>
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed}
-            className="w-full sm:w-auto gap-2"
-          >
-            Next: Preferences
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+        <div className="space-y-2 pt-2">
+          {!canNext && (
+            <p className="text-xs text-text-muted text-center">
+              Select a date range above to continue
+            </p>
+          )}
+          <div className="flex flex-col-reverse sm:flex-row items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleSkip}
+              disabled={!canSkip}
+              title={!canSkip ? 'Select a date range first' : undefined}
+              className="w-full sm:w-auto gap-2"
+            >
+              <Zap className="h-4 w-4" />
+              Skip &amp; Generate
+            </Button>
+            <Button
+              onClick={handleNext}
+              disabled={!canNext}
+              title={!canNext ? 'Select a date range first' : undefined}
+              className="w-full sm:w-auto gap-2"
+            >
+              Next: Preferences
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
