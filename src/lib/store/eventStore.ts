@@ -48,13 +48,32 @@ export function computeEventStatus(event: Event): EventStatus {
     }
   }
 
-  // Auto-transition active events when end time passes
-  if (status === 'active' && date && endTime) {
+  // Guard active events: if the event date is in the future the status
+  // should display as scheduled (prevents a manually-set or stale 'active'
+  // from showing "Happening Now" for a future event).
+  if (status === 'active' && date) {
     const now = new Date()
-    const [hours, minutes] = endTime.split(':').map(Number)
-    const eventEnd = new Date(date + 'T00:00:00')
-    eventEnd.setHours(hours, minutes, 0, 0)
-    if (now > eventEnd) {
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const eventDate = new Date(date + 'T00:00:00')
+
+    if (eventDate > todayStart) {
+      // Event hasn't started yet — display as scheduled
+      return 'scheduled'
+    }
+
+    // Event is today or past — check if end time has passed
+    if (endTime) {
+      const [hours, minutes] = endTime.split(':').map(Number)
+      const eventEnd = new Date(date + 'T00:00:00')
+      eventEnd.setHours(hours, minutes, 0, 0)
+      if (now > eventEnd) {
+        return 'needs_closeout'
+      }
+    }
+
+    // Event is past with no end time — needs closeout
+    if (eventDate < todayStart) {
       return 'needs_closeout'
     }
   }
