@@ -62,7 +62,7 @@ export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }:
           {idea.category && (
             <Badge variant="outline">{idea.category}</Badge>
           )}
-          <span className="text-text-muted italic">Date & time: set in Full Plan</span>
+          <span className="text-text-muted italic">Date & time added after saving</span>
         </div>
 
         {/* Actions */}

@@ -174,7 +174,7 @@ export const DEFAULT_OBSERVANCES: Observance[] = [
     month: 3,
     day: 8,
     type: 'cultural',
-    emoji: '♀️',
+    emoji: '🌸',
     description: 'A global day celebrating the achievements of women and advocating for gender equality.',
     eventIdeas: ['Women in leadership panel', 'Self-care workshop', 'Community celebration'],
     enabled: true,

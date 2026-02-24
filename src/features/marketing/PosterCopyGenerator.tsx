@@ -1,10 +1,11 @@
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { EventMarketing } from '@/lib/types/event'
 
 interface PosterCopyGeneratorProps {
   marketing: EventMarketing
   onRegenerateSection: (section: string) => void
+  onGoToPoster?: () => void
 }
 
 /**
@@ -14,6 +15,7 @@ interface PosterCopyGeneratorProps {
 export function PosterCopyGenerator({
   marketing,
   onRegenerateSection,
+  onGoToPoster,
 }: PosterCopyGeneratorProps) {
   const { posterCopy } = marketing
 
@@ -23,14 +25,27 @@ export function PosterCopyGenerator({
         <h3 className="text-sm font-semibold text-text-primary">
           Poster Copy
         </h3>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() => onRegenerateSection('posterCopy')}
-        >
-          <RefreshCw className="h-3 w-3" />
-          Regenerate Poster Copy
-        </Button>
+        <div className="flex items-center gap-2">
+          {onGoToPoster && (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={onGoToPoster}
+              className="gap-1 text-primary border-primary/30 hover:bg-primary/10"
+            >
+              Poster tab
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => onRegenerateSection('posterCopy')}
+          >
+            <RefreshCw className="h-3 w-3" />
+            Regenerate
+          </Button>
+        </div>
       </div>
 
       {/* Visual poster preview */}
@@ -52,7 +67,19 @@ export function PosterCopyGenerator({
       </div>
 
       <p className="text-xs text-text-muted text-center">
-        This is a simplified preview. Use the Poster tab for the full poster layout.
+        Simplified preview — switch to the{' '}
+        {onGoToPoster ? (
+          <button
+            type="button"
+            onClick={onGoToPoster}
+            className="text-primary underline underline-offset-2 hover:no-underline"
+          >
+            Poster tab
+          </button>
+        ) : (
+          'Poster tab'
+        )}{' '}
+        for the full branded layout and export.
       </p>
     </div>
   )

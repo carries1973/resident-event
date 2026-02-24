@@ -22,6 +22,7 @@ import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
 interface EventMarketingTabProps {
   event: Event
+  onGoToPoster?: () => void
 }
 
 /**
@@ -34,7 +35,7 @@ interface EventMarketingTabProps {
  *   4. Error                             -> ErrorState with retry
  *   5. Has marketing data                -> full materials view
  */
-export function EventMarketingTab({ event }: EventMarketingTabProps) {
+export function EventMarketingTab({ event, onGoToPoster }: EventMarketingTabProps) {
   const updateEvent = useEventStore((s) => s.updateEvent)
   const getBuildingById = useBuildingStore((s) => s.getBuildingById)
 
@@ -258,6 +259,7 @@ export function EventMarketingTab({ event }: EventMarketingTabProps) {
       <PosterCopyGenerator
         marketing={marketing}
         onRegenerateSection={handleRegenerateSection}
+        onGoToPoster={onGoToPoster}
       />
 
       <Separator />

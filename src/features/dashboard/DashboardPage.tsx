@@ -64,6 +64,18 @@ export function DashboardPage() {
     )
   }, [events, currentYear, currentMonth])
 
+  // Fallback: total scheduled/draft events across all time (used when month count is 0)
+  const totalUpcoming = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return events.filter((e) => {
+      if (!e.date) return false
+      const d = new Date(e.date + 'T00:00:00')
+      const status = computeEventStatus(e)
+      return d >= today && (status === 'scheduled' || status === 'active' || status === 'draft')
+    }).length
+  }, [events])
+
   // Next Action Required: unsaved Quick Ideas → draft events → no events nudge
   const nextAction = useMemo(() => {
     const sessions = loadQuickIdeasSessions()
@@ -177,9 +189,13 @@ export function DashboardPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-text-muted uppercase tracking-wider">
-                  Events Planned — {monthName}
+                  {metricsThisMonth.planned > 0
+                    ? `Events — ${monthName}`
+                    : 'Upcoming Events'}
                 </p>
-                <p className="text-3xl font-bold text-text-primary">{metricsThisMonth.planned}</p>
+                <p className="text-3xl font-bold text-text-primary">
+                  {metricsThisMonth.planned > 0 ? metricsThisMonth.planned : totalUpcoming}
+                </p>
               </div>
               <ArrowRight className="h-4 w-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </CardContent>

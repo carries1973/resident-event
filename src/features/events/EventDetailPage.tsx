@@ -32,6 +32,7 @@ export function EventDetailPage() {
   const deleteEvent = useEventStore((s) => s.deleteEvent)
   const transitionStatus = useEventStore((s) => s.transitionStatus)
 
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -132,7 +133,7 @@ export function EventDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue={initialTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="marketing" className="gap-1.5">
@@ -174,7 +175,7 @@ export function EventDetailPage() {
           <EventOverviewTab event={event} />
         </TabsContent>
         <TabsContent value="marketing">
-          <EventMarketingTab event={event} />
+          <EventMarketingTab event={event} onGoToPoster={() => setActiveTab('poster')} />
         </TabsContent>
         <TabsContent value="promokit">
           <EventPromoKitTab event={event} />
