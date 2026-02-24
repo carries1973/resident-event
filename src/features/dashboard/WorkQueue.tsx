@@ -1,12 +1,22 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, ClipboardCheck, FileEdit } from 'lucide-react'
+import { Clock, ClipboardCheck, FileEdit, AlertCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useEventStore } from '@/lib/store/eventStore'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { formatDateShort } from '@/lib/utils/dates'
 import type { Event } from '@/lib/types/event'
+
+/** Returns human-readable list of fields still needed to schedule a draft event */
+function getMissingScheduleFields(event: Event): string[] {
+  const missing: string[] = []
+  if (!event.date) missing.push('date')
+  if (!event.startTime) missing.push('start time')
+  if (!event.endTime) missing.push('end time')
+  if (!event.location?.trim()) missing.push('location')
+  return missing
+}
 
 type QueueItemType = 'prepare' | 'closeout' | 'schedule'
 
@@ -137,6 +147,17 @@ export function WorkQueue() {
                         </span>
                       )}
                     </p>
+                    {/* Show missing fields for draft events */}
+                    {item.type === 'schedule' && (() => {
+                      const missing = getMissingScheduleFields(item.event)
+                      if (missing.length === 0) return null
+                      return (
+                        <p className="flex items-center gap-1 text-xs text-warning mt-0.5">
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          Missing: {missing.join(', ')}
+                        </p>
+                      )
+                    })()}
                   </div>
                   <Button
                     variant="outline"

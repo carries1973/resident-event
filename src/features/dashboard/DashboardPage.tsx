@@ -154,34 +154,50 @@ export function DashboardPage() {
         </Card>
       )}
 
-      {/* Metrics */}
+      {/* Metrics — clickable cards navigating to filtered views */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 py-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <CalendarDays className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-text-muted uppercase tracking-wider">
-                Events Planned — {monthName}
-              </p>
-              <p className="text-3xl font-bold text-text-primary">{metricsThisMonth.planned}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 py-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs text-text-muted uppercase tracking-wider">
-                Events Completed — {monthName}
-              </p>
-              <p className="text-3xl font-bold text-text-primary">{metricsThisMonth.completed}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <button
+          type="button"
+          onClick={() => navigate('/calendar')}
+          className="text-left group"
+          aria-label={`View calendar for ${monthName}`}
+        >
+          <Card className="group-hover:border-primary/30 group-hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                <CalendarDays className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-text-muted uppercase tracking-wider">
+                  Events Planned — {monthName}
+                </p>
+                <p className="text-3xl font-bold text-text-primary">{metricsThisMonth.planned}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </CardContent>
+          </Card>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/events')}
+          className="text-left group"
+          aria-label="View completed events"
+        >
+          <Card className="group-hover:border-success/30 group-hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success group-hover:bg-success/20 transition-colors">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-text-muted uppercase tracking-wider">
+                  Events Completed — {monthName}
+                </p>
+                <p className="text-3xl font-bold text-text-primary">{metricsThisMonth.completed}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </CardContent>
+          </Card>
+        </button>
       </div>
 
       {/* Two-column: Work Queue + Recent Events */}

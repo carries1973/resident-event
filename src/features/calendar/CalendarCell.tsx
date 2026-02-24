@@ -1,9 +1,26 @@
 import type { Event } from '@/lib/types/event'
 import type { Observance } from '@/lib/types/observance'
-import type { EventStatus } from '@/lib/types/common'
+import type { EventStatus, ObservanceType } from '@/lib/types/common'
 import { computeEventStatus } from '@/lib/store/eventStore'
 import { getMonthName } from '@/lib/utils/dates'
 import { cn } from '@/lib/utils'
+import { Flag, Globe, Sparkles, Leaf, type LucideIcon } from 'lucide-react'
+
+/** Icon per observance type — replaces emoji for clean, print-friendly output */
+const OBSERVANCE_ICON: Record<ObservanceType, LucideIcon> = {
+  national:  Flag,
+  cultural:  Globe,
+  religious: Sparkles,
+  theme:     Leaf,
+}
+
+/** Muted colour class per observance type */
+const OBSERVANCE_ICON_COLOUR: Record<ObservanceType, string> = {
+  national:  'text-red-400',
+  cultural:  'text-blue-400',
+  religious: 'text-purple-400',
+  theme:     'text-green-400',
+}
 
 /** Colour dot mapping for each event status */
 const STATUS_DOT_COLOURS: Record<EventStatus, string> = {
@@ -76,21 +93,25 @@ export function CalendarCell({
         </span>
       </div>
 
-      {/* Observances — emoji + name text (readable on screen and in print) */}
+      {/* Observances — icon + name text (lucide icons, print-friendly) */}
       {observances.length > 0 && (
         <div className="flex flex-col gap-0.5 mt-0.5">
-          {observances.slice(0, 2).map((obs) => (
-            <div
-              key={obs.id}
-              title={obs.name}
-              className="flex items-center gap-0.5 min-w-0"
-            >
-              <span className="text-[10px] shrink-0 print:hidden">{obs.emoji}</span>
-              <span className="text-[10px] leading-3.5 truncate text-text-muted print:text-black print:font-normal">
-                {obs.name}
-              </span>
-            </div>
-          ))}
+          {observances.slice(0, 2).map((obs) => {
+            const Icon = OBSERVANCE_ICON[obs.type]
+            const iconColour = OBSERVANCE_ICON_COLOUR[obs.type]
+            return (
+              <div
+                key={obs.id}
+                title={obs.name}
+                className="flex items-center gap-0.5 min-w-0"
+              >
+                <Icon className={cn('h-2.5 w-2.5 shrink-0', iconColour)} aria-hidden="true" />
+                <span className="text-[10px] leading-3.5 truncate text-text-muted print:text-black">
+                  {obs.name}
+                </span>
+              </div>
+            )
+          })}
           {observances.length > 2 && (
             <span className="text-[10px] leading-3.5 text-text-muted italic">
               +{observances.length - 2} more
