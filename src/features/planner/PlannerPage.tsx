@@ -321,14 +321,14 @@ export function PlannerPage() {
           <TabsList className="h-10 gap-1 bg-surface border border-border-default p-1">
             <TabsTrigger
               value="quick"
-              className="data-[state=active]:bg-accent-primary data-[state=active]:text-white data-[state=active]:shadow-sm gap-1.5"
+              className="data-[state=active]:!bg-accent-primary data-[state=active]:!text-white data-[state=active]:shadow-sm gap-1.5"
             >
               <Lightbulb className="h-4 w-4" />
               Quick Ideas
             </TabsTrigger>
             <TabsTrigger
               value="full"
-              className="data-[state=active]:bg-accent-primary data-[state=active]:text-white data-[state=active]:shadow-sm gap-1.5"
+              className="data-[state=active]:!bg-accent-primary data-[state=active]:!text-white data-[state=active]:shadow-sm gap-1.5"
             >
               <CalendarRange className="h-4 w-4" />
               Full Plan

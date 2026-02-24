@@ -26,6 +26,9 @@
   --color-text-muted: #6B7189;
   --color-text-inverse: #F0F1F5;
 
+  --color-accent-primary: #3B7BF4;
+  --color-accent-primary-hover: #2A63D4;
+
   --color-brand: #8F1D23;
   --color-brand-hover: #731820;
   --color-brand-light: #FDF2F2;
@@ -62,6 +65,9 @@
   --color-text-secondary: #B0B5C8;
   --color-text-muted: #8891AD;
   --color-text-inverse: #1A1D2E;
+
+  --color-accent-primary: #4F8CFF;
+  --color-accent-primary-hover: #3B7BF4;
 
   --color-brand: #C0464D;
   --color-brand-hover: #D4666C;
