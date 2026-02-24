@@ -21,6 +21,8 @@ import { UnsavedChangesGuard } from '@/components/common/UnsavedChangesGuard'
 import { AmenityChecklist } from './AmenityChecklist'
 import { ResidentMixSelector } from './ResidentMixSelector'
 import { BrandingSection } from './BrandingSection'
+import { AddressAutocomplete } from './AddressAutocomplete'
+import { LocalEventsCard } from './LocalEventsCard'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -190,11 +192,23 @@ export function BuildingFormPage() {
             </Field>
 
             <Field label="Address">
-              <Input
+              <AddressAutocomplete
                 value={form.address}
-                onChange={(e) => updateField('address', e.target.value)}
-                placeholder="123 Main Street"
+                onChange={(value) => updateField('address', value)}
+                onSelect={(selection) => {
+                  // Auto-fill address, city, and province from the selected result
+                  setForm((prev) => ({
+                    ...prev,
+                    address: selection.address,
+                    city: selection.city ? selection.city : prev.city,
+                    province: selection.province ? selection.province : prev.province,
+                  }))
+                  setIsDirty(true)
+                }}
               />
+              <p className="text-xs text-text-muted mt-1">
+                Start typing to search — city and province will fill automatically.
+              </p>
             </Field>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -316,6 +330,8 @@ export function BuildingFormPage() {
             venues={form.nearbyVenues}
             onChange={(venues) => updateField('nearbyVenues', venues)}
           />
+          {/* Show local events near the building's city for programming inspiration */}
+          <LocalEventsCard city={form.city} province={form.province} />
         </CollapsibleSection>
 
         {/* Section: Resident Mix */}
