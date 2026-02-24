@@ -27,30 +27,6 @@ import { PlannerError } from './PlannerError'
 import { PlannerSaveFlow } from './PlannerSaveFlow'
 import { ensureBuildingDefaults, type Building } from '@/lib/types/building'
 
-// Quick month-range presets used in both modes
-const MONTH_PRESETS = [
-  { label: 'This month', offset: 0 },
-  { label: 'Next month', offset: 1 },
-  { label: 'Next 3 months', offset: 3 },
-  { label: 'Next 6 months', offset: 6 },
-]
-
-function getMonthPresetLabel(offset: number): string {
-  const now = new Date()
-  const d = new Date(now.getFullYear(), now.getMonth() + offset, 1)
-  return d.toLocaleString('en-CA', { month: 'long', year: 'numeric' })
-}
-
-// Short persona labels for the tag bar (subset for Quick Ideas)
-const QUICK_PERSONA_OPTIONS = [
-  { id: 'urban_professional', label: 'Urban Pro' },
-  { id: 'young_family', label: 'Families' },
-  { id: 'downsizer', label: 'Seniors' },
-  { id: 'eco_conscious', label: 'Eco / Wellness' },
-  { id: 'roommate_renter', label: 'Social' },
-  { id: 'healthcare_professional', label: 'Healthcare' },
-]
-
 export function PlannerPage() {
   const navigate = useNavigate()
   const buildings = useBuildingStore((s) => s.buildings)
@@ -62,10 +38,6 @@ export function PlannerPage() {
   )
   const [mode, setMode] = useState<string>('quick')
   const [showSaveFlow, setShowSaveFlow] = useState(false)
-
-  // Shared month + persona state (visible above tabs in both modes)
-  const [selectedMonthOffset, setSelectedMonthOffset] = useState<number | null>(null)
-  const [selectedPersonaId, setSelectedPersonaId] = useState<string>('')
 
   // Full plan wizard state
   const [planState, planDispatch] = usePlannerState(selectedBuildingId)
@@ -351,8 +323,6 @@ export function PlannerPage() {
             <QuickIdeas
               building={selectedBuilding}
               onExpandToFullPlan={handleExpandToFullPlan}
-              personaOverride={selectedPersonaId}
-              eventMonthLabel={selectedMonthOffset !== null ? getMonthPresetLabel(selectedMonthOffset) : undefined}
             />
           </TabsContent>
 

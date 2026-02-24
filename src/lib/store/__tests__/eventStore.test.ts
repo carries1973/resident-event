@@ -29,6 +29,7 @@ function makeRSVP(overrides?: Partial<RSVPEntry>): RSVPEntry {
     guestCount: 1,
     registeredAt: new Date().toISOString(),
     status: 'confirmed',
+    attendanceStatus: 'attending',
     ...overrides,
   }
 }

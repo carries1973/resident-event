@@ -4,7 +4,7 @@ import type { Event } from '@/lib/types/event'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { DollarSign, Plus, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { DollarSign, Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
