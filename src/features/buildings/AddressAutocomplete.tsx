@@ -32,9 +32,10 @@ interface NominatimResult {
 }
 
 interface AddressSelection {
-  address: string   // street address line (number + road)
+  address: string    // street address line (number + road)
   city: string
-  province: string  // Canadian province code e.g. "AB"
+  province: string   // Canadian province code e.g. "AB"
+  postalCode: string // Canadian postal code e.g. "T2P 1J9"
 }
 
 interface AddressAutocompleteProps {
@@ -166,10 +167,12 @@ export function AddressAutocomplete({
     const city = getCity(result.address)
     const province = parseProvinceCode(result.address.state ?? result.address.state_code)
     const streetAddress = buildStreetAddress(result.address)
+    // Nominatim returns Canadian postal codes with a space (e.g., "T2P 1J9")
+    const postalCode = result.address.postcode ?? ''
 
     // Update the raw input value to show the selected street address
     onChange(streetAddress || result.display_name.split(',')[0].trim())
-    onSelect({ address: streetAddress, city, province })
+    onSelect({ address: streetAddress, city, province, postalCode })
     setSuggestions([])
     setOpen(false)
   }

@@ -72,11 +72,11 @@ export const useBuildingStore = create<BuildingState & BuildingActions>()(
     }),
     {
       name: 'rei-building-store',
-      version: 2,
+      version: 3,
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as BuildingState & BuildingActions
-        if (version < 2) {
-          // Ensure all buildings have default array fields (added in later schema revisions)
+        if (version < 3) {
+          // Ensure all buildings have default array fields and new scalar fields
           return {
             ...state,
             buildings: (state.buildings ?? []).map(ensureBuildingDefaults),

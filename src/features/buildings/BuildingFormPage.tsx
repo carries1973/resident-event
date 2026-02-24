@@ -29,7 +29,7 @@ import { toast } from 'sonner'
 type FormSection = 'basic' | 'amenities' | 'local-context' | 'residents' | 'branding' | 'brand-tone' | 'operations'
 
 const SECTION_FIELDS: Record<FormSection, string[]> = {
-  basic: ['name', 'address', 'city', 'province', 'propertyType', 'unitCount', 'primaryUse'],
+  basic: ['name', 'address', 'postalCode', 'city', 'province', 'propertyType', 'unitCount', 'primaryUse'],
   amenities: ['amenities', 'customAmenities'],
   'local-context': ['nearbyVenues'],
   residents: ['primaryResidentGroup', 'secondaryResidentGroup'],
@@ -196,10 +196,11 @@ export function BuildingFormPage() {
                 value={form.address}
                 onChange={(value) => updateField('address', value)}
                 onSelect={(selection) => {
-                  // Auto-fill address, city, and province from the selected result
+                  // Auto-fill address, postal code, city, and province from the selected result
                   setForm((prev) => ({
                     ...prev,
                     address: selection.address,
+                    postalCode: selection.postalCode ? selection.postalCode : prev.postalCode,
                     city: selection.city ? selection.city : prev.city,
                     province: selection.province ? selection.province : prev.province,
                   }))
@@ -210,6 +211,18 @@ export function BuildingFormPage() {
                 Start typing to search — city and province will fill automatically.
               </p>
             </Field>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Postal code">
+                <Input
+                  value={form.postalCode ?? ''}
+                  onChange={(e) => updateField('postalCode', e.target.value.toUpperCase())}
+                  placeholder="T2P 1J9"
+                  maxLength={7}
+                />
+              </Field>
+              <div />
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="City" required>

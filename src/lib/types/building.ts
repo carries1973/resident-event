@@ -4,6 +4,7 @@ export interface Building {
   id: UUID
   name: string
   address: string
+  postalCode: string               // Canadian postal code (e.g., "T2P 1J9")
   city: string
   province: string                 // Canadian province code (e.g., "AB")
   propertyType: PropertyType
@@ -49,6 +50,7 @@ export function createDefaultBuilding(overrides: Partial<Building> & Pick<Buildi
   return {
     id: crypto.randomUUID(),
     address: '',
+    postalCode: '',
     propertyType: 'rental_apartment',
     primaryUse: 'long_term_rental',
     amenities: [],
@@ -83,6 +85,7 @@ export function ensureBuildingDefaults(building: Building): Building {
     nearbyVenues: building.nearbyVenues ?? [],
     preferredEventDays: building.preferredEventDays ?? [],
     address: building.address ?? '',
+    postalCode: building.postalCode ?? '',
     propertyType: building.propertyType ?? 'rental_apartment',
     primaryUse: building.primaryUse ?? 'long_term_rental',
     primaryResidentGroup: building.primaryResidentGroup ?? '',
