@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Pencil, Copy, ArrowLeft, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -22,7 +22,11 @@ import { toast } from 'sonner'
 export function EventDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const hasHydrated = useEventStoreHydrated()
+
+  // Allow deep-linking to a specific tab via ?tab=dayof etc.
+  const initialTab = searchParams.get('tab') ?? 'overview'
   const event = useEventStore((s) => s.events.find((e) => e.id === id))
   const duplicateEvent = useEventStore((s) => s.duplicateEvent)
   const deleteEvent = useEventStore((s) => s.deleteEvent)
@@ -128,7 +132,7 @@ export function EventDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue={initialTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="marketing" className="gap-1.5">

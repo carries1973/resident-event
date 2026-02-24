@@ -57,7 +57,7 @@ export function AppLayout() {
         <SheetContent side="left" className="w-64 bg-sidebar p-0">
           <SheetHeader className="px-4 py-3 border-b border-white/10">
             <SheetTitle className="text-sidebar-foreground text-sm font-semibold">
-              Resident Events
+              Resident Event Planner
             </SheetTitle>
           </SheetHeader>
           <MobileSidebarNav onClose={() => setMobileMenuOpen(false)} />

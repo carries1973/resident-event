@@ -30,7 +30,7 @@ export function FeedbackPage() {
         </div>
         <h2 className="text-lg font-semibold text-text-primary mb-2">Thanks for your feedback!</h2>
         <p className="text-text-secondary max-w-sm mb-6">
-          Your input helps improve Resident Event Ideas. We'll review it shortly.
+          Your input helps improve Resident Event Planner. We'll review it shortly.
         </p>
         <Button variant="outline" onClick={() => { setSubmitted(false); setMessage('') }}>
           Submit More Feedback

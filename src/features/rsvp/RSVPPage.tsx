@@ -234,7 +234,7 @@ export function RSVPPage() {
 
       {/* Footer */}
       <div className="text-center py-6 text-xs text-gray-400">
-        Powered by Resident Event Ideas
+        Powered by Resident Event Planner
       </div>
     </div>
   )

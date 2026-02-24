@@ -78,7 +78,7 @@ export function Sidebar() {
         </div>
         {sidebarOpen && (
           <span className="text-sm font-semibold text-sidebar-foreground truncate">
-            Resident Events
+            Resident Event Planner
           </span>
         )}
       </div>

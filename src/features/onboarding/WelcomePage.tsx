@@ -19,7 +19,7 @@ export function WelcomePage() {
         </div>
 
         <h1 className="text-3xl font-bold text-text-primary mb-3">
-          Welcome to Resident Event Ideas
+          Welcome to Resident Event Planner
         </h1>
         <p className="text-text-secondary text-lg mb-8">
           AI-powered event planning for Canadian residential communities.

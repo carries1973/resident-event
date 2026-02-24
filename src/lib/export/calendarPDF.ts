@@ -445,7 +445,7 @@ export async function exportCalendarPDF(
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(sectionTitleSize)
       doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
-      doc.text('Resident Events', rightColX, rightY)
+      doc.text('Resident Event Planner', rightColX, rightY)
       rightY += sectionGap
 
       // Thin rule under heading
