@@ -93,11 +93,16 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
 
         setIdeas(parsed.data)
 
+        // Generate a descriptive session name
+        const now = new Date()
+        const monthLabel = now.toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })
+        const sessionName = effectiveTopic && effectiveTopic !== 'surprise me'
+          ? effectiveTopic.charAt(0).toUpperCase() + effectiveTopic.slice(1)
+          : `Surprise Mix — ${monthLabel}`
+
         const newSession: QuickIdeasSession = {
           id: crypto.randomUUID(),
-          topic: effectiveTopic
-            ? effectiveTopic.charAt(0).toUpperCase() + effectiveTopic.slice(1)
-            : 'Surprise me',
+          topic: sessionName,
           building: building.name,
           ideas: parsed.data,
           createdAt: new Date().toISOString(),
@@ -125,8 +130,10 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
 
   const handleResumeSession = (session: QuickIdeasSession) => {
     setIdeas(session.ideas)
-    setTopic(session.topic === 'Surprise me' ? '' : session.topic)
+    // Clear topic if it was a "Surprise Mix" session (auto-named), otherwise restore it
+    setTopic(session.topic.startsWith('Surprise Mix') ? '' : session.topic)
     setError(null)
+    toast.success(`Resumed: ${session.topic}`)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -338,6 +345,13 @@ export function QuickIdeas({ building, onExpandToFullPlan }: QuickIdeasProps) {
                       {session.building} &middot; {formatSessionDate(session.createdAt)} &middot;{' '}
                       {session.ideas.length} idea{session.ideas.length !== 1 ? 's' : ''}
                     </p>
+                    {/* Preview idea names */}
+                    {expandedSessionId !== session.id && session.ideas.length > 0 && (
+                      <p className="text-xs text-text-muted mt-0.5 truncate">
+                        {session.ideas.slice(0, 3).map((i) => i.name).join(' · ')}
+                        {session.ideas.length > 3 && ` · +${session.ideas.length - 3} more`}
+                      </p>
+                    )}
                   </button>
 
                   {/* Right: actions */}
