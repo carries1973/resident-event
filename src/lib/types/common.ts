@@ -20,11 +20,15 @@ export interface StaffRole {
   responsibilities: string
 }
 
+export type AttendanceStatus = 'attending' | 'maybe' | 'not_attending'
+
 export interface RSVPEntry {
   id: UUID
   name: string
+  email?: string
   unitNumber?: string
   guestCount: number
+  attendanceStatus: AttendanceStatus
   dietaryNotes?: string
   accessibilityNeeds?: string
   registeredAt: ISODateTime

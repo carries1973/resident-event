@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { generateAI, AiError } from '@/lib/ai/client'
 import { parseAiResponse, aiDayOfChecklistSchema } from '@/lib/ai/schemas'
 import type { AiDayOfChecklist } from '@/lib/ai/schemas'
+import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
 type Phase = 'setup' | 'during' | 'teardown'
 
@@ -279,6 +280,11 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
           {isGenerating ? 'Generating…' : 'Regenerate Run-of-Show'}
         </Button>
       </div>
+
+      {/* AI disclaimer — shown when checklist was AI-generated */}
+      {event.aiGenerated && (
+        <AiDisclaimer contentType="run-of-show timeline" />
+      )}
 
       {/* Overall Progress */}
       <div className="space-y-2">

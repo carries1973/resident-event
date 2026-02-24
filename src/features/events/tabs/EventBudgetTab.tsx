@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { DollarSign, Plus, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { toast } from 'sonner'
+import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
 // ---------------------------------------------------------------------------
 // Budget Tab — estimated vs actual line-item tracking
@@ -100,6 +101,11 @@ export function EventBudgetTab({ event }: EventBudgetTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* AI disclaimer — budget estimates from AI are approximate */}
+      {event.aiGenerated && (
+        <AiDisclaimer contentType="budget estimate" />
+      )}
+
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-lg border border-border-default p-3">

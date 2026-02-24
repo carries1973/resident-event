@@ -171,15 +171,36 @@ export const useAppStore = create<AppState & AppActions>()(
     {
       name: 'rei-app-store',
       version: 1,
+      // Exclude calendar year/month from persistence so the calendar always
+      // opens on the actual current month rather than a stale persisted value.
+      partialize: (state) => ({
+        theme: state.theme,
+        onboardingComplete: state.onboardingComplete,
+        currentBuildingId: state.currentBuildingId,
+        sidebarOpen: state.sidebarOpen,
+        // Persist filters/building filter but NOT year/month
+        calendar: {
+          year: new Date().getFullYear(),
+          month: new Date().getMonth() + 1,
+          statusFilters: state.calendar.statusFilters,
+          buildingFilter: state.calendar.buildingFilter,
+          observanceTypeFilters: state.calendar.observanceTypeFilters,
+        },
+        disabledObservanceIds: state.disabledObservanceIds,
+        customObservances: state.customObservances,
+      }),
       onRehydrateStorage: () => {
         return (state?: AppState & AppActions) => {
+          if (!state) return
+
           // Sync theme class on rehydration
-          if (state) {
-            document.documentElement.classList.toggle(
-              'dark',
-              state.theme === 'dark',
-            )
-          }
+          document.documentElement.classList.toggle('dark', state.theme === 'dark')
+
+          // Always reset calendar to current month on load, regardless of
+          // what was persisted. This prevents stale month/year from localStorage.
+          const now = new Date()
+          state.calendar.year = now.getFullYear()
+          state.calendar.month = now.getMonth() + 1
         }
       },
     },

@@ -3,12 +3,18 @@ import { useEventStore } from '@/lib/store/eventStore'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { toast } from 'sonner'
 import type { Event } from '@/lib/types/event'
-import type { RSVPEntry } from '@/lib/types/common'
+import type { RSVPEntry, AttendanceStatus } from '@/lib/types/common'
 
 interface RSVPFormProps {
   event: Event
   onSuccess: () => void
 }
+
+const ATTENDANCE_OPTIONS: { value: AttendanceStatus; label: string }[] = [
+  { value: 'attending', label: 'I plan to attend' },
+  { value: 'maybe', label: 'I might be able to make it' },
+  { value: 'not_attending', label: "I can't make it" },
+]
 
 export function RSVPForm({ event, onSuccess }: RSVPFormProps) {
   const addRSVP = useEventStore((s) => s.addRSVP)
@@ -19,7 +25,9 @@ export function RSVPForm({ event, onSuccess }: RSVPFormProps) {
   const brandColor = building?.brandColor || '#3B7BF4'
 
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [guestCount, setGuestCount] = useState(1)
+  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>('attending')
   const [unitNumber, setUnitNumber] = useState('')
   const [dietaryNotes, setDietaryNotes] = useState('')
   const [accessibilityNeeds, setAccessibilityNeeds] = useState('')
@@ -32,6 +40,10 @@ export function RSVPForm({ event, onSuccess }: RSVPFormProps) {
 
     if (!name.trim()) {
       newErrors.name = 'Name is required'
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Please enter a valid email address'
     }
 
     if (guestCount < 1 || guestCount > 10) {
@@ -59,8 +71,10 @@ export function RSVPForm({ event, onSuccess }: RSVPFormProps) {
       const entry: RSVPEntry = {
         id: crypto.randomUUID(),
         name: name.trim(),
+        email: email.trim() || undefined,
         unitNumber: unitNumber.trim() || undefined,
         guestCount,
+        attendanceStatus,
         dietaryNotes: dietaryNotes.trim() || undefined,
         accessibilityNeeds: accessibilityNeeds.trim() || undefined,
         registeredAt: new Date().toISOString(),
@@ -99,7 +113,7 @@ export function RSVPForm({ event, onSuccess }: RSVPFormProps) {
           htmlFor="rsvp-name"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          Name <span className="text-red-500">*</span>
+          Full name <span className="text-red-500">*</span>
         </label>
         <input
           id="rsvp-name"
@@ -119,6 +133,35 @@ export function RSVPForm({ event, onSuccess }: RSVPFormProps) {
         />
         {errors.name && (
           <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+        )}
+      </div>
+
+      {/* Email */}
+      <div>
+        <label
+          htmlFor="rsvp-email"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Email{' '}
+          <span className="text-gray-400 font-normal">(optional)</span>
+        </label>
+        <input
+          id="rsvp-email"
+          type="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value)
+            if (errors.email) setErrors((prev) => ({ ...prev, email: '' }))
+          }}
+          className={`${inputClasses} ${errors.email ? 'ring-2 ring-red-400 border-red-400' : ''}`}
+          style={{
+            ...(!(errors.email) && { '--tw-ring-color': brandColor } as React.CSSProperties),
+          }}
+          placeholder="you@example.com"
+          autoComplete="email"
+        />
+        {errors.email && (
+          <p className="mt-1 text-sm text-red-600">{errors.email}</p>
         )}
       </div>
 
@@ -152,6 +195,36 @@ export function RSVPForm({ event, onSuccess }: RSVPFormProps) {
           <p className="mt-1 text-sm text-red-600">{errors.guestCount}</p>
         )}
       </div>
+
+      {/* Attendance status */}
+      <fieldset>
+        <legend className="block text-sm font-medium text-gray-700 mb-2">
+          Will you attend? <span className="text-red-500">*</span>
+        </legend>
+        <div className="space-y-2">
+          {ATTENDANCE_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+              style={{
+                borderColor: attendanceStatus === opt.value ? brandColor : '#E5E7EB',
+                backgroundColor: attendanceStatus === opt.value ? `${brandColor}08` : 'white',
+              }}
+            >
+              <input
+                type="radio"
+                name="attendanceStatus"
+                value={opt.value}
+                checked={attendanceStatus === opt.value}
+                onChange={() => setAttendanceStatus(opt.value)}
+                className="h-4 w-4 shrink-0"
+                style={{ accentColor: brandColor }}
+              />
+              <span className="text-sm text-gray-800">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       {/* Unit number */}
       <div>

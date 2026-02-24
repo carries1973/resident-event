@@ -34,6 +34,7 @@ import type { AiMarketingOutput } from '@/lib/ai/schemas'
 import { buildMarketingPrompt } from '@/lib/ai/prompts/marketing'
 import type { Event, EventMarketing } from '@/lib/types/event'
 import { formatDate, formatTime } from '@/lib/utils/dates'
+import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
 // ---------------------------------------------------------------------------
 // Unsplash integration
@@ -330,6 +331,9 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
           Regenerate
         </Button>
       </div>
+
+      {/* AI disclaimer */}
+      <AiDisclaimer contentType="promo kit copy" />
 
       {/* ── Email block ── */}
       <div className="space-y-2">

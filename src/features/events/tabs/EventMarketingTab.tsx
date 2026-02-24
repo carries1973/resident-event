@@ -18,6 +18,7 @@ import { EmailGenerator } from '@/features/marketing/EmailGenerator'
 import { SocialGenerator } from '@/features/marketing/SocialGenerator'
 import { PosterCopyGenerator } from '@/features/marketing/PosterCopyGenerator'
 import { MarketingPreview } from '@/features/marketing/MarketingPreview'
+import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
 interface EventMarketingTabProps {
   event: Event
@@ -198,6 +199,9 @@ export function EventMarketingTab({ event }: EventMarketingTabProps) {
           Regenerate All
         </Button>
       </div>
+
+      {/* AI disclaimer */}
+      <AiDisclaimer contentType="marketing copy" />
 
       {/* Error banner (if section regeneration fails while data exists) */}
       {error && (

@@ -175,11 +175,13 @@ export function EventRSVPManagerTab({ event }: EventRSVPManagerTabProps) {
   const waitlistHeadcount = event.rsvpWaitlist.reduce((sum, r) => sum + r.guestCount, 0)
 
   function exportCSV() {
-    const headers = ['Name', 'Unit', 'Guests', 'Dietary Notes', 'Accessibility', 'Registered', 'Status']
+    const headers = ['Name', 'Email', 'Unit', 'Guests', 'Attending', 'Dietary Notes', 'Accessibility', 'Registered', 'Status']
     const rows = [...event.rsvpList, ...event.rsvpWaitlist].map((r) => [
       r.name,
+      r.email ?? '',
       r.unitNumber ?? '',
       String(r.guestCount),
+      r.attendanceStatus ?? 'attending',
       r.dietaryNotes ?? '',
       r.accessibilityNeeds ?? '',
       r.registeredAt,
@@ -254,6 +256,7 @@ export function EventRSVPManagerTab({ event }: EventRSVPManagerTabProps) {
               <thead className="bg-page">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium text-text-muted">Name</th>
+                  <th className="text-left px-3 py-2 font-medium text-text-muted hidden md:table-cell">Email</th>
                   <th className="text-left px-3 py-2 font-medium text-text-muted hidden sm:table-cell">Unit</th>
                   <th className="text-center px-3 py-2 font-medium text-text-muted">Guests</th>
                   <th className="text-right px-3 py-2 font-medium text-text-muted"></th>
@@ -267,6 +270,15 @@ export function EventRSVPManagerTab({ event }: EventRSVPManagerTabProps) {
                       {r.dietaryNotes && (
                         <p className="text-xs text-text-muted">{r.dietaryNotes}</p>
                       )}
+                      {r.attendanceStatus === 'maybe' && (
+                        <p className="text-xs text-warning">Might attend</p>
+                      )}
+                      {r.attendanceStatus === 'not_attending' && (
+                        <p className="text-xs text-text-muted line-through">Can't attend</p>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-text-secondary text-xs hidden md:table-cell">
+                      {r.email ?? '—'}
                     </td>
                     <td className="px-3 py-2 text-text-secondary hidden sm:table-cell">
                       {r.unitNumber ?? '—'}
@@ -285,7 +297,7 @@ export function EventRSVPManagerTab({ event }: EventRSVPManagerTabProps) {
               </tbody>
               <tfoot className="border-t border-border-default bg-page">
                 <tr>
-                  <td colSpan={2} className="px-3 py-2 text-xs font-semibold text-text-muted hidden sm:table-cell">Total headcount</td>
+                  <td colSpan={3} className="px-3 py-2 text-xs font-semibold text-text-muted hidden sm:table-cell">Total headcount</td>
                   <td colSpan={2} className="px-3 py-2 text-xs font-semibold text-text-muted sm:hidden">Total headcount</td>
                   <td className="px-3 py-2 text-center text-sm font-bold text-text-primary">{totalHeadcount}</td>
                   <td />

@@ -6,6 +6,7 @@ import { formatDate, formatTime } from '@/lib/utils/dates'
 import { MapPin, Users, Tag, DollarSign, CalendarDays, Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { AiDisclaimer } from '@/components/common/AiDisclaimer'
 
 interface EventOverviewTabProps {
   event: Event
@@ -200,6 +201,11 @@ export function EventOverviewTab({ event }: EventOverviewTabProps) {
           </p>
         )}
       </section>
+
+      {/* AI-generated notice — only shown for AI-planned events */}
+      {event.aiGenerated && (
+        <AiDisclaimer contentType="event details" />
+      )}
 
       {/* Description */}
       {event.description && (
