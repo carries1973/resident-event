@@ -267,19 +267,94 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
   }
 
   // ── PNG download for social ──
+  // Uses a pure Canvas 2D approach instead of html2canvas to avoid the
+  // oklch() colour parsing crash on Tailwind v4 / shadcn colour tokens.
   async function handleDownloadSocialPng() {
-    const { default: html2canvas } = await import('html2canvas')
-    const el = document.getElementById('promo-social-block')
-    if (!el) return
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true })
-    const link = document.createElement('a')
-    link.href = canvas.toDataURL('image/png')
-    link.download = `${event.name.replace(/\s+/g, '-')}-social.png`
-    link.click()
-    // Required by Unsplash guidelines: trigger download event when photo is used
+    const brandColor = building?.brandColor ?? '#3B7BF4'
+    const canvas = document.createElement('canvas')
+    const W = 1080, H = 1080
+    canvas.width = W
+    canvas.height = H
+    const ctx = canvas.getContext('2d')!
+
+    // Background
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, W, H)
+
+    // Unsplash image (top 60%)
+    if (unsplashPhoto) {
+      try {
+        const img = await new Promise<HTMLImageElement>((res, rej) => {
+          const i = new Image()
+          i.crossOrigin = 'anonymous'
+          i.onload = () => res(i)
+          i.onerror = rej
+          i.src = unsplashPhoto.urls.regular
+        })
+        ctx.drawImage(img, 0, 0, W, Math.round(H * 0.60))
+      } catch { /* skip image if CORS blocked */ }
+    } else {
+      const grad = ctx.createLinearGradient(0, 0, 0, H * 0.60)
+      grad.addColorStop(0, brandColor)
+      grad.addColorStop(1, '#1a1d2e')
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, W, Math.round(H * 0.60))
+    }
+
+    // Brand colour strip
+    ctx.fillStyle = brandColor
+    ctx.fillRect(0, Math.round(H * 0.60), W, 8)
+
+    // Caption area
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, Math.round(H * 0.60) + 8, W, H - Math.round(H * 0.60) - 8)
+
+    // Event name
+    ctx.font = '700 52px DM Sans, Inter, system-ui, sans-serif'
+    ctx.fillStyle = '#1a1d2e'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'top'
+    const nameY = Math.round(H * 0.62)
+    const nameLines = wrapText(ctx, event.name, W - 80, 52)
+    nameLines.slice(0, 2).forEach((line, i) => ctx.fillText(line, W / 2, nameY + i * 64, W - 80))
+
+    // Caption
+    ctx.font = '400 32px DM Sans, Inter, system-ui, sans-serif'
+    ctx.fillStyle = '#555'
+    const captionY = nameY + nameLines.slice(0, 2).length * 64 + 20
+    const captionLines = wrapText(ctx, socialCaption, W - 80, 32)
+    captionLines.slice(0, 3).forEach((line, i) => ctx.fillText(line, W / 2, captionY + i * 42, W - 80))
+
+    // Building name footer
+    ctx.font = '400 26px DM Sans, Inter, system-ui, sans-serif'
+    ctx.fillStyle = '#aaa'
+    ctx.fillText(building?.name ?? '', W / 2, H - 48)
+
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `${event.name.replace(/\s+/g, '-')}-social.png`
+      link.click()
+      URL.revokeObjectURL(link.href)
+    }, 'image/png')
+
     if (unsplashPhoto) {
       triggerUnsplashDownload(unsplashPhoto.links.download_location)
     }
+  }
+
+  function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number, _fontSize: number): string[] {
+    const words = text.split(' ')
+    const lines: string[] = []
+    let current = ''
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word
+      if (ctx.measureText(test).width <= maxW) { current = test }
+      else { if (current) lines.push(current); current = word }
+    }
+    if (current) lines.push(current)
+    return lines
   }
 
   // ── Empty / generating states ──

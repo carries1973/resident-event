@@ -101,25 +101,33 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
   const zones = opts.template.zones
 
   // Event name — hero text (may wrap to 2 lines)
+  // Draw a strong backing strip so the event name is always legible over busy artwork
+  drawTextBackingStrip(ctx, opts.eventName, zones.eventName, FONT.eventName.size, opts.template.overlayScheme, 1.15)
   drawWrappedText(ctx, opts.eventName, zones.eventName, {
     ...FONT.eventName,
     color: textColor,
     lineHeight: 1.15,
-    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.35)' : undefined,
+    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.30)',
   })
 
-  // Date + time
+  // Date + time — draw a semi-transparent backing strip for readability
+  if (opts.dateTime) {
+    drawTextBackingStrip(ctx, opts.dateTime, zones.dateTime, FONT.dateTime.size, opts.template.overlayScheme)
+  }
   drawWrappedText(ctx, opts.dateTime, zones.dateTime, {
     ...FONT.dateTime,
     color: subTextColor,
-    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.25)' : undefined,
+    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.30)',
   })
 
-  // Location
+  // Location — backing strip for readability
+  if (opts.location) {
+    drawTextBackingStrip(ctx, opts.location, zones.location, FONT.location.size, opts.template.overlayScheme)
+  }
   drawWrappedText(ctx, opts.location, zones.location, {
     ...FONT.location,
     color: subTextColor,
-    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.20)' : undefined,
+    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.25)',
   })
 
   // CTA — use brand colour pill background
@@ -439,6 +447,58 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error(`Failed to load image: ${src}`))
     img.src = src
   })
+}
+
+/**
+ * Draws a semi-transparent pill/strip behind text zones so dynamic text is
+ * always legible regardless of the template artwork underneath.
+ */
+function drawTextBackingStrip(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  zone: PosterTemplateZone,
+  fontSize: number,
+  scheme: 'light' | 'dark',
+  lineHeight = 1.25,
+): void {
+  if (!text) return
+  ctx.save()
+
+  ctx.font = `800 ${fontSize}px DM Sans, Inter, system-ui, sans-serif`
+  const words = text.split(' ')
+  const lines: string[] = []
+  let current = ''
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word
+    if (ctx.measureText(test).width <= zone.maxWidth) {
+      current = test
+    } else {
+      if (current) lines.push(current)
+      current = word
+    }
+  }
+  if (current) lines.push(current)
+  const displayLines = lines.slice(0, 3)
+
+  const lineH = fontSize * lineHeight
+  const blockH = lineH * displayLines.length
+  const blockW = Math.min(
+    Math.max(...displayLines.map((l) => ctx.measureText(l).width)),
+    zone.maxWidth,
+  ) + 48
+
+  const stripX = zone.x - blockW / 2
+  const stripY = zone.y - 12
+  const stripH = blockH + 24
+
+  const bg = scheme === 'light'
+    ? 'rgba(0,0,0,0.38)'
+    : 'rgba(255,255,255,0.30)'
+  ctx.fillStyle = bg
+  roundRect(ctx, stripX, stripY, blockW, stripH, 12)
+  ctx.fill()
+
+  ctx.restore()
 }
 
 /** Draws a rounded rectangle path (no fill/stroke — caller handles that) */

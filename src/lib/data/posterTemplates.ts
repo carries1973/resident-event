@@ -101,21 +101,23 @@ const DEFAULT_ZONES: PosterTemplateZones = {
     maxHeight: 130,
     align: 'center',
   },
+  // Event name pushed lower (Y 560) so it clears the template's own decorative
+  // headline artwork that typically occupies the upper-centre of the design.
   eventName: {
     x: 540,
-    y: 480,
+    y: 560,
     maxWidth: 900,
     align: 'center',
   },
   dateTime: {
     x: 540,
-    y: 770,
+    y: 800,
     maxWidth: 820,
     align: 'center',
   },
   location: {
     x: 540,
-    y: 890,
+    y: 880,
     maxWidth: 820,
     align: 'center',
   },
@@ -216,7 +218,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'game-night',
     imagePath: '/poster-templates/Game Night.png',
     thumbnailPath: '/poster-templates/Game Night.png',
-    zones: { ...DEFAULT_ZONES, eventName: { ...DEFAULT_ZONES.eventName, y: 510 } },
+    zones: { ...DEFAULT_ZONES, eventName: { ...DEFAULT_ZONES.eventName, y: 590 } },
     overlayScheme: 'light',
     tags: ['games', 'trivia', 'board games', 'social', 'evening', 'fun', 'tournament'],
     description: 'Bold and playful. Perfect for trivia, board game nights, or tournaments.',
