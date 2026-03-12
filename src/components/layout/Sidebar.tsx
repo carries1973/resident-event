@@ -7,7 +7,6 @@ import {
   Calendar,
   Heart,
   Database,
-  Package,
   ImageIcon,
   UserCog,
   MessageSquare,
@@ -48,7 +47,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Assets',
     items: [
-      { label: 'Event Packages', to: '/assets/packages', icon: <Package className="h-4 w-4" /> },
       { label: 'Poster Templates', to: '/assets/library', icon: <ImageIcon className="h-4 w-4" /> },
     ],
   },

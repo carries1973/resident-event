@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, SlidersHorizontal, ArrowRight } from 'lucide-react'
 import { useAppStore } from '@/lib/store/appStore'
 import { useEventStore, computeEventStatus } from '@/lib/store/eventStore'
@@ -18,13 +18,16 @@ import type { Observance } from '@/lib/types/observance'
 /**
  * CalendarPage — full calendar page with month navigation,
  * collapsible filter panel, calendar grid, and day drawer.
- * Shows an empty-state banner when no events exist.
+ *
+ * Month and filter state is synced to URL query parameters so the view
+ * can be bookmarked and shared (e.g. /calendar?month=2026-03).
  */
 export function CalendarPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
   const calendar = useAppStore((s) => s.calendar)
-  const nextMonth = useAppStore((s) => s.nextMonth)
-  const prevMonth = useAppStore((s) => s.prevMonth)
+  const setCalendarMonth = useAppStore((s) => s.setCalendarMonth)
   const disabledObservanceIds = useAppStore((s) => s.disabledObservanceIds)
   const events = useEventStore((s) => s.events)
   const localEvents = useLocalEventStore((s) => s.localEvents)
@@ -33,8 +36,45 @@ export function CalendarPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
-  const setCalendarMonth = useAppStore((s) => s.setCalendarMonth)
+  // Sync URL ?month=YYYY-MM param → store on mount and when param changes
+  useEffect(() => {
+    const monthParam = searchParams.get('month')
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      const [y, m] = monthParam.split('-').map(Number)
+      if (y >= 2020 && y <= 2035 && m >= 1 && m <= 12) {
+        setCalendarMonth(y, m)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount — subsequent navigation is driven by the store
+
+  // Keep URL in sync with store month
   const { year, month, statusFilters, buildingFilter, observanceTypeFilters } = calendar
+  useEffect(() => {
+    const monthStr = `${year}-${String(month).padStart(2, '0')}`
+    const current = searchParams.get('month')
+    if (current !== monthStr) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('month', monthStr)
+        return next
+      }, { replace: true })
+    }
+  }, [year, month, searchParams, setSearchParams])
+
+  function prevMonth() {
+    let y = year
+    let m = month - 1
+    if (m < 1) { m = 12; y-- }
+    setCalendarMonth(y, m)
+  }
+
+  function nextMonth() {
+    let y = year
+    let m = month + 1
+    if (m > 12) { m = 1; y++ }
+    setCalendarMonth(y, m)
+  }
 
   const hasEvents = events.length > 0
 
@@ -57,7 +97,6 @@ export function CalendarPage() {
   const nearestEventMonth = useMemo(() => {
     if (currentMonthEventCount > 0 || events.length === 0) return null
 
-    // Collect all months that have events
     const monthsWithEvents = new Map<string, { year: number; month: number; count: number }>()
     for (const event of events) {
       if (!event.date || event.date.length < 7) continue
@@ -66,7 +105,7 @@ export function CalendarPage() {
         const cs = computeEventStatus(event)
         if (!statusFilters.includes(cs)) continue
       }
-      const key = event.date.slice(0, 7) // "YYYY-MM"
+      const key = event.date.slice(0, 7)
       const eYear = parseInt(key.slice(0, 4), 10)
       const eMonth = parseInt(key.slice(5, 7), 10)
       const existing = monthsWithEvents.get(key)
@@ -79,7 +118,6 @@ export function CalendarPage() {
 
     if (monthsWithEvents.size === 0) return null
 
-    // Find the nearest month to the current view
     let nearest: { year: number; month: number; count: number } | null = null
     let nearestDistance = Infinity
     const currentTotal = year * 12 + month
@@ -107,14 +145,11 @@ export function CalendarPage() {
     if (!selectedDateISO) return []
     return events.filter((event: Event) => {
       if (event.date !== selectedDateISO) return false
-
       if (statusFilters.length > 0) {
         const computedStatus = computeEventStatus(event)
         if (!statusFilters.includes(computedStatus)) return false
       }
-
       if (buildingFilter && event.buildingId !== buildingFilter) return false
-
       return true
     })
   }, [events, selectedDateISO, statusFilters, buildingFilter])
@@ -125,15 +160,11 @@ export function CalendarPage() {
     return localEvents.filter((e: LocalEvent) => e.date === selectedDateISO)
   }, [localEvents, selectedDateISO])
 
-  // Observances for the selected day (shown in the day drawer).
-  // Themes are internal planning context — excluded from resident-facing views.
-  // Month-long observances (Ramadan, Black History Month, etc.) are shown in
-  // the drawer for every day of that month since they span the whole period.
+  // Observances for the selected day
   const selectedDayObservances = useMemo(() => {
     if (selectedDay === null) return []
     return DEFAULT_OBSERVANCES.filter((obs: Observance) => {
       if (obs.month !== month) return false
-      // Themes are internal — not shown in the calendar at all
       if (obs.type === 'theme') return false
       if (disabledObservanceIds.includes(obs.id)) return false
       if (
@@ -141,8 +172,6 @@ export function CalendarPage() {
         !observanceTypeFilters.includes(obs.type)
       )
         return false
-      // Day-specific observance: must match the day
-      // Month-long observance (no day): show on every day of the month
       if (obs.day != null && obs.day !== selectedDay) return false
       return true
     })

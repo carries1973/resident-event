@@ -10,6 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useEventStore, useEventStoreHydrated } from '@/lib/store/eventStore'
 import { useBuildingStore, useBuildingStoreHydrated } from '@/lib/store/buildingStore'
 import { useAppStore } from '@/lib/store/appStore'
@@ -17,6 +25,7 @@ import { createDefaultEvent, type Event } from '@/lib/types/event'
 import type { RecurrenceType } from '@/lib/types/common'
 import { UnsavedChangesGuard } from '@/components/common/UnsavedChangesGuard'
 import { toast } from 'sonner'
+import { RefreshCw } from 'lucide-react'
 
 /**
  * Generate recurring dates from a start date up to an end date.
@@ -91,6 +100,7 @@ export function EventFormPage() {
   const existingEvent = useEventStore((s) =>
     id ? s.events.find((e) => e.id === id) : undefined,
   )
+  const allEvents = useEventStore((s) => s.events)
   const createEvent = useEventStore((s) => s.createEvent)
   const updateEvent = useEventStore((s) => s.updateEvent)
   const buildings = useBuildingStore((s) => s.buildings)
@@ -107,6 +117,10 @@ export function EventFormPage() {
   const [isDirty, setIsDirty] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
+
+  // Recurring edit propagation dialog
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false)
+  const [pendingFormData, setPendingFormData] = useState<Event | null>(null)
 
   // Resolve buildingId once stores have finished rehydrating from localStorage.
   // Without this, currentBuildingId and buildings are empty on fresh page load.
@@ -163,6 +177,19 @@ export function EventFormPage() {
     setTagInput('')
   }
 
+  /**
+   * Check if this event is part of a recurring series (either parent or child).
+   * Returns the parent event ID if it is, null otherwise.
+   */
+  function getRecurrenceParentId(): string | null {
+    if (!existingEvent) return null
+    if (existingEvent.recurrenceParentId) return existingEvent.recurrenceParentId
+    // Check if this event is a parent (has children pointing to it)
+    const hasChildren = allEvents.some((e) => e.recurrenceParentId === existingEvent.id)
+    if (hasChildren) return existingEvent.id
+    return null
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const errs: string[] = []
@@ -185,8 +212,18 @@ export function EventFormPage() {
     setErrors([])
 
     if (isEditing && id) {
+      // Check if this is part of a recurring series — if so, ask the user
+      const parentId = getRecurrenceParentId()
+      if (parentId) {
+        setPendingFormData({ ...form })
+        setShowRecurringDialog(true)
+        return
+      }
+
+      // Non-recurring edit — save immediately
       updateEvent(id, { ...form, updatedAt: new Date().toISOString() })
       toast.success(`"${form.name}" updated`)
+      setIsDirty(false)
       navigate(`/events/${id}`)
     } else {
       // Create the parent event
@@ -204,7 +241,7 @@ export function EventFormPage() {
         const futureDates = generateRecurrenceDates(
           form.date,
           form.recurrenceEndDate,
-          form.recurrence,
+          form.recurrence as 'weekly' | 'biweekly' | 'monthly',
         )
 
         for (const date of futureDates) {
@@ -233,9 +270,68 @@ export function EventFormPage() {
         toast.success(`"${parentEvent.name}" created`)
       }
 
+      setIsDirty(false)
       navigate(`/events/${parentEvent.id}`)
     }
+  }
+
+  /** Save changes to this event only */
+  function handleSaveThisOnly() {
+    if (!id || !pendingFormData) return
+    updateEvent(id, { ...pendingFormData, updatedAt: new Date().toISOString() })
+    toast.success(`"${pendingFormData.name}" updated`)
+    setShowRecurringDialog(false)
     setIsDirty(false)
+    navigate(`/events/${id}`)
+  }
+
+  /** Save changes to this event AND all future events in the series */
+  function handleSaveAllFuture() {
+    if (!id || !pendingFormData) return
+
+    const now = new Date().toISOString()
+    const parentId = getRecurrenceParentId()
+
+    // Determine which events are "future" siblings (same parent, date >= today)
+    const today = new Date().toISOString().slice(0, 10)
+    const siblings = allEvents.filter((e) => {
+      if (e.id === id) return false // handled separately below
+      const eParentId = e.recurrenceParentId ?? (e.id === parentId ? e.id : null)
+      if (!eParentId || eParentId !== parentId) return false
+      return e.date >= today
+    })
+
+    // Update the current event
+    updateEvent(id, { ...pendingFormData, updatedAt: now })
+
+    // Update all future siblings — preserve their individual dates and instance-specific data
+    for (const sibling of siblings) {
+      updateEvent(sibling.id, {
+        name: pendingFormData.name,
+        description: pendingFormData.description,
+        whyItWorks: pendingFormData.whyItWorks,
+        category: pendingFormData.category,
+        startTime: pendingFormData.startTime,
+        endTime: pendingFormData.endTime,
+        location: pendingFormData.location,
+        budgetEstimate: pendingFormData.budgetEstimate,
+        setupAndSupplies: pendingFormData.setupAndSupplies,
+        staffing: pendingFormData.staffing,
+        weatherPlan: pendingFormData.weatherPlan,
+        accessibilityNotes: pendingFormData.accessibilityNotes,
+        measurementPlan: pendingFormData.measurementPlan,
+        rsvpEnabled: pendingFormData.rsvpEnabled,
+        rsvpLimit: pendingFormData.rsvpLimit,
+        tags: pendingFormData.tags,
+        updatedAt: now,
+      })
+    }
+
+    const updatedCount = siblings.length + 1
+    toast.success(`Updated ${updatedCount} event${updatedCount !== 1 ? 's' : ''} in this series`)
+    setShowRecurringDialog(false)
+    setIsDirty(false)
+    navigate(`/events/${id}`)
   }
 
   return (
@@ -593,8 +689,8 @@ export function EventFormPage() {
           </div>
         </section>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3 pt-4 border-t border-border-default">
+        {/* Actions — sticky on mobile, inline on desktop */}
+        <div className="hidden sm:flex items-center gap-3 pt-4 border-t border-border-default">
           <Button type="submit" size="lg">
             {isEditing ? 'Save changes' : 'Create event'}
           </Button>
@@ -602,7 +698,61 @@ export function EventFormPage() {
             Cancel
           </Button>
         </div>
+
+        {/* Sticky footer — mobile only */}
+        <div className="sm:hidden fixed bottom-0 inset-x-0 z-20 bg-surface border-t border-border-default p-3 flex gap-2 safe-area-bottom">
+          <Button type="submit" size="lg" className="flex-1">
+            {isEditing ? 'Save changes' : 'Create event'}
+          </Button>
+          <Button type="button" variant="outline" size="lg" onClick={() => navigate(-1)}>
+            Cancel
+          </Button>
+        </div>
+        {/* Spacer so content doesn't hide behind sticky footer on mobile */}
+        <div className="sm:hidden h-20" />
       </form>
+
+      {/* Recurring event edit propagation dialog */}
+      <Dialog open={showRecurringDialog} onOpenChange={setShowRecurringDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-brand" />
+              Edit recurring event
+            </DialogTitle>
+            <DialogDescription>
+              This event is part of a recurring series. How would you like to apply your changes?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <button
+              type="button"
+              onClick={handleSaveThisOnly}
+              className="w-full text-left rounded-lg border border-border-default p-4 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <p className="font-medium text-text-primary text-sm">This event only</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                Only update this single occurrence. Other events in the series remain unchanged.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAllFuture}
+              className="w-full text-left rounded-lg border border-border-default p-4 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <p className="font-medium text-text-primary text-sm">This and all future events</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                Update this occurrence and all future events in the series. Past events and individual RSVP/closeout data are preserved.
+              </p>
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRecurringDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

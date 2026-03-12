@@ -43,8 +43,21 @@ function NotificationRunner() {
   useEffect(() => {
     function run() {
       const events = useEventStore.getState().events
-      const existing = useNotificationStore.getState().notifications
-      const newNotifications = generateNotifications(events, existing)
+      const { notifications, dismissedKeys } = useNotificationStore.getState()
+
+      // Build the "existing" list from both active notifications AND
+      // previously dismissed keys — so cleared alerts never re-appear.
+      const existingFromDismissed = dismissedKeys.map((key) => {
+        const [eventId, type] = key.split(':')
+        return { eventId, type } as { eventId?: string; type: import('@/lib/types/notification').NotificationType }
+      })
+
+      const combined = [
+        ...notifications.map((n) => ({ eventId: n.eventId, type: n.type })),
+        ...existingFromDismissed,
+      ]
+
+      const newNotifications = generateNotifications(events, combined)
       if (newNotifications.length > 0) {
         useNotificationStore.getState().addNotifications(newNotifications)
       }

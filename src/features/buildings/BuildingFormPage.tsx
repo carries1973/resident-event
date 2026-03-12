@@ -452,8 +452,8 @@ export function BuildingFormPage() {
           </div>
         </CollapsibleSection>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3 pt-4">
+        {/* Actions — sticky on mobile, inline on desktop */}
+        <div className="hidden sm:flex items-center gap-3 pt-4">
           <Button type="submit" size="lg">
             {isEditing ? 'Save changes' : 'Create building'}
           </Button>
@@ -466,6 +466,23 @@ export function BuildingFormPage() {
             Cancel
           </Button>
         </div>
+
+        {/* Sticky footer — mobile only */}
+        <div className="sm:hidden fixed bottom-0 inset-x-0 z-20 bg-surface border-t border-border-default p-3 flex gap-2 safe-area-bottom">
+          <Button type="submit" size="lg" className="flex-1">
+            {isEditing ? 'Save changes' : 'Create building'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => navigate('/buildings')}
+          >
+            Cancel
+          </Button>
+        </div>
+        {/* Spacer so content doesn't hide behind sticky footer on mobile */}
+        <div className="sm:hidden h-20" />
       </form>
     </div>
   )

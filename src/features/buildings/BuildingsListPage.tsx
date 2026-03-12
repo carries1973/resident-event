@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useBuildingStore } from '@/lib/store/buildingStore'
 import { useAppStore } from '@/lib/store/appStore'
+import { useEventStore } from '@/lib/store/eventStore'
 import { BuildingCard } from './BuildingCard'
 import { BuildingsEmpty } from './BuildingsEmpty'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -17,6 +18,7 @@ export function BuildingsListPage() {
   const deleteBuilding = useBuildingStore((s) => s.deleteBuilding)
   const currentBuildingId = useAppStore((s) => s.currentBuildingId)
   const setCurrentBuildingId = useAppStore((s) => s.setCurrentBuildingId)
+  const events = useEventStore((s) => s.events)
 
   const [deleteTarget, setDeleteTarget] = useState<Building | null>(null)
 
@@ -41,6 +43,11 @@ export function BuildingsListPage() {
     toast.success(`"${deleteTarget.name}" deleted`)
     setDeleteTarget(null)
   }
+
+  // Count events associated with the building being deleted
+  const affectedEventCount = deleteTarget
+    ? events.filter((e) => e.buildingId === deleteTarget.id).length
+    : 0
 
   if (buildings.length === 0) {
     return (
@@ -74,7 +81,7 @@ export function BuildingsListPage() {
         ))}
       </div>
 
-      {/* Delete confirmation */}
+      {/* Delete confirmation with cascade warning */}
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
@@ -84,7 +91,14 @@ export function BuildingsListPage() {
         description={
           <span>
             This will permanently delete <strong>{deleteTarget?.name}</strong> and
-            cannot be undone. Type the building name to confirm.
+            cannot be undone.
+            {affectedEventCount > 0 && (
+              <span className="block mt-2 text-amber-700 dark:text-amber-400 font-medium">
+                ⚠ {affectedEventCount} {affectedEventCount === 1 ? 'event is' : 'events are'} associated
+                with this building and will become unlinked.
+              </span>
+            )}
+            {' '}Type the building name to confirm.
           </span>
         }
         confirmText={deleteTarget?.name}

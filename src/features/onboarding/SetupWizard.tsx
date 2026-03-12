@@ -9,10 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useBuildingStore } from '@/lib/store/buildingStore'
+import { useBuildingStore, useBuildingStoreHydrated } from '@/lib/store/buildingStore'
 import { useAppStore } from '@/lib/store/appStore'
 import { CANADIAN_PROVINCES } from '@/lib/types/common'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 
 /**
  * Minimal building setup wizard — only 3 fields: name, city, province.
@@ -23,6 +23,10 @@ export function SetupWizard() {
   const createBuilding = useBuildingStore((s) => s.createBuilding)
   const completeOnboarding = useAppStore((s) => s.completeOnboarding)
   const setCurrentBuildingId = useAppStore((s) => s.setCurrentBuildingId)
+
+  // Wait for the store to finish rehydrating from localStorage before allowing
+  // submission — prevents silent failures on fresh page loads.
+  const storeReady = useBuildingStoreHydrated()
 
   const [name, setName] = useState('')
   const [city, setCity] = useState('')
@@ -123,8 +127,20 @@ export function SetupWizard() {
             <p className="text-sm text-danger">{error}</p>
           )}
 
-          <Button type="submit" size="lg" className="w-full mt-6">
-            Create building
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full mt-6"
+            disabled={!storeReady}
+          >
+            {!storeReady ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading…
+              </>
+            ) : (
+              'Create building'
+            )}
           </Button>
         </form>
       </div>
