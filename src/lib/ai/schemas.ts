@@ -172,6 +172,7 @@ export const aiLocalEventSchema = z
       .default('community'),
     description: z.string().default(''),
     url: z.string().optional(),
+    whyRelevant: z.string().optional(),
   })
   .passthrough()
 

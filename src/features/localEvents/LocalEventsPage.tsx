@@ -152,6 +152,12 @@ function SuggestedCard({ event, onToggle }: SuggestedCardProps) {
           {expanded && event.description && (
             <p className="mt-1.5 text-xs text-text-muted">{event.description}</p>
           )}
+          {expanded && (event as AiLocalEvent & { whyRelevant?: string }).whyRelevant && (
+            <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 rounded px-2 py-1">
+              <span className="font-semibold">Why it matters for your residents: </span>
+              {(event as AiLocalEvent & { whyRelevant?: string }).whyRelevant}
+            </p>
+          )}
         </div>
       </div>
     </div>
