@@ -31,6 +31,7 @@ export interface CalendarExportParams {
     day?: number
     name: string
     month: number
+    emoji?: string
   }>
   buildingName: string
   brandColor: string // hex, e.g. "#2E8B8B"
@@ -258,13 +259,13 @@ export async function exportCalendarPDF(
 
   // Group observances by day for quick lookup
   // day === undefined means month-long — we skip those in the grid (too many cells)
-  const observancesByDay = new Map<number, Array<{ name: string }>>()
+  const observancesByDay = new Map<number, Array<{ name: string; emoji?: string }>>()
   for (const obs of observances) {
     if (obs.day != null && obs.month === month) {
       if (!observancesByDay.has(obs.day)) {
         observancesByDay.set(obs.day, [])
       }
-      observancesByDay.get(obs.day)!.push({ name: obs.name })
+      observancesByDay.get(obs.day)!.push({ name: obs.name, emoji: obs.emoji })
     }
   }
 
@@ -304,15 +305,23 @@ export async function exportCalendarPDF(
 
           const maxObs = 2 // never crowd the cell
           const displayObs = dayObservances.slice(0, maxObs)
-          const bulletSize = 0.055 // small square bullet (inches)
-          const bulletGap = 0.04  // gap between bullet and text
+          const emojiWidth = 0.14  // approximate width of one emoji character at 8.5pt
+          const emojiGap = 0.03   // gap between emoji and text
           for (const obs of displayObs) {
-            // Draw a small filled square as an icon substitute
-            doc.setFillColor(0x99, 0x99, 0x99)
-            doc.rect(x + 0.05, contentY - bulletSize + 0.005, bulletSize, bulletSize, 'F')
-            const obsText = truncateText(doc, obs.name, maxTextWidth - bulletSize - bulletGap)
-            doc.setTextColor(0x77, 0x77, 0x77)
-            doc.text(obsText, x + 0.05 + bulletSize + bulletGap, contentY)
+            if (obs.emoji) {
+              // Render the observance emoji — clean, colourful, instantly recognisable
+              doc.setFont('helvetica', 'normal')
+              doc.setFontSize(8.5)
+              doc.text(obs.emoji, x + 0.05, contentY)
+              const obsText = truncateText(doc, obs.name, maxTextWidth - emojiWidth - emojiGap)
+              doc.setTextColor(0x77, 0x77, 0x77)
+              doc.text(obsText, x + 0.05 + emojiWidth + emojiGap, contentY)
+            } else {
+              // Fallback: no emoji — just render the name
+              const obsText = truncateText(doc, obs.name, maxTextWidth)
+              doc.setTextColor(0x77, 0x77, 0x77)
+              doc.text(obsText, x + 0.05, contentY)
+            }
             contentY += lineH
           }
           if (dayObservances.length > maxObs) {
@@ -439,13 +448,15 @@ export async function exportCalendarPDF(
         doc.setFontSize(itemFontSize)
         doc.setTextColor(0x33, 0x33, 0x33)
 
-        // Date in grey, name in black
+        // Date in grey, emoji + name in black
         const dateLabelWidth = doc.getTextWidth(dateLabel + '  ')
         doc.setTextColor(0x77, 0x77, 0x77)
         doc.text(dateLabel, leftColX, leftY)
         doc.setTextColor(0x22, 0x22, 0x22)
         doc.setFont('helvetica', 'normal')
-        const obsName = truncateText(doc, obs.name, legendColWidth - dateLabelWidth)
+        // Prepend emoji if available for a polished legend
+        const obsDisplayName = obs.emoji ? `${obs.emoji}  ${obs.name}` : obs.name
+        const obsName = truncateText(doc, obsDisplayName, legendColWidth - dateLabelWidth)
         doc.text(obsName, leftColX + dateLabelWidth, leftY)
 
         leftY += itemLineHeight

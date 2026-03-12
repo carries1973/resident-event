@@ -104,6 +104,7 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
           name: obs.name,
           month: obs.month,
           day: obs.day,
+          emoji: obs.emoji,
         })),
         buildingName: building.name,
         brandColor: building.brandColor || '#3B7BF4',
