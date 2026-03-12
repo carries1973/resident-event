@@ -23,6 +23,7 @@ const OBSERVANCE_TYPE_OPTIONS: { value: ObservanceType; label: string }[] = [
   { value: 'cultural', label: 'Cultural' },
   { value: 'religious', label: 'Religious' },
   { value: 'theme', label: 'Seasonal Theme' },
+  { value: 'fun', label: 'Fun Days' },
 ]
 
 /**

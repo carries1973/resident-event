@@ -5,7 +5,7 @@ import type { EventStatus, ObservanceType } from '@/lib/types/common'
 import { computeEventStatus } from '@/lib/store/eventStore'
 import { getMonthName } from '@/lib/utils/dates'
 import { cn } from '@/lib/utils'
-import { Flag, Globe, Sparkles, Leaf, type LucideIcon } from 'lucide-react'
+import { Flag, Globe, Sparkles, Leaf, PartyPopper, type LucideIcon } from 'lucide-react'
 
 /** Icon per observance type — replaces emoji for clean, print-friendly output */
 const OBSERVANCE_ICON: Record<ObservanceType, LucideIcon> = {
@@ -13,6 +13,7 @@ const OBSERVANCE_ICON: Record<ObservanceType, LucideIcon> = {
   cultural:  Globe,
   religious: Sparkles,
   theme:     Leaf,
+  fun:       PartyPopper,
 }
 
 /** Muted colour class per observance type */
@@ -21,6 +22,7 @@ const OBSERVANCE_ICON_COLOUR: Record<ObservanceType, string> = {
   cultural:  'text-blue-400',
   religious: 'text-purple-400',
   theme:     'text-green-400',
+  fun:       'text-amber-400',
 }
 
 /** Colour dot mapping for each event status */

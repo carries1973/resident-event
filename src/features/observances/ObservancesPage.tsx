@@ -205,6 +205,7 @@ export function ObservancesPage() {
                   <SelectItem value="cultural">Cultural</SelectItem>
                   <SelectItem value="religious">Religious</SelectItem>
                   <SelectItem value="theme">Seasonal Theme</SelectItem>
+                  <SelectItem value="fun">Fun Day</SelectItem>
                 </SelectContent>
               </Select>
             </div>

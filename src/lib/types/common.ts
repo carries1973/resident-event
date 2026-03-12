@@ -41,7 +41,7 @@ export type PropertyType = 'rental_apartment' | 'condo' | 'mixed_use' | 'townhom
 
 export type PrimaryUse = 'long_term_rental' | 'owner_occupied' | 'mixed'
 
-export type ObservanceType = 'national' | 'cultural' | 'religious' | 'theme'
+export type ObservanceType = 'national' | 'cultural' | 'religious' | 'theme' | 'fun'
 
 export type EventStatus = 'draft' | 'scheduled' | 'active' | 'needs_closeout' | 'completed' | 'cancelled' | 'archived'
 

@@ -5,6 +5,8 @@ export interface QuickIdea {
   description: string
   suggestedLocation: string
   category: string
+  whyItWorks?: string
+  estimatedBudget?: string
 }
 
 /**
@@ -50,10 +52,12 @@ INSTRUCTIONS
 Generate 5 to 8 quick event ideas based on the user's topic or theme.
 
 For each idea return a JSON object with:
-- name: a short, catchy event name
-- description: one sentence, maximum 25 words, describing the event
+- name: a short, catchy event name (max 8 words)
+- description: one sentence, maximum 30 words, resident-facing and inviting
 - suggestedLocation: pick from the building's amenities list above, or use "Common area" if none fit
 - category: one of "Wellness", "Community", "Seasonal", "Food & Drink", "Learning", "Social", "Family", "Culture"
+- whyItWorks: one sentence explaining why this event suits the resident mix and building (max 20 words)
+- estimatedBudget: one of "$0–50", "$50–150", "$150–300", "$300–500", "$500+" based on the ${building.defaultBudgetTier} tier
 
 ═══════════════════════════════════════════════════════════════
 RULES

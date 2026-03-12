@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Sparkles, RefreshCw, ChevronDown, ChevronUp, Mail, Bell, Heart, AlertTriangle } from 'lucide-react'
+import { Sparkles, RefreshCw, ChevronDown, ChevronUp, Mail, Bell, Heart, AlertTriangle, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -173,14 +173,31 @@ export function EventMarketingTab({ event, onGoToPoster }: EventMarketingTabProp
   // Render: empty state (no marketing data yet)
   // -----------------------------------------------------------------------
   if (!event.marketing) {
+    const missingContext: string[] = []
+    if (!event.description) missingContext.push('event description')
+    if (!event.location) missingContext.push('location')
+
     return (
-      <EmptyState
-        icon={<Sparkles />}
-        title="Marketing materials"
-        description="Generate AI-powered email subject lines, SMS, social captions, poster copy, and more for this event."
-        actionLabel="Generate Marketing Materials"
-        onAction={handleGenerate}
-      />
+      <div className="space-y-4">
+        {missingContext.length > 0 && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 px-4 py-3 flex items-start gap-3">
+            <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-semibold text-text-primary">Better results with more detail</p>
+              <p className="text-text-secondary mt-0.5">
+                This event is missing: <strong>{missingContext.join(' and ')}</strong>. Adding these in the Overview tab will significantly improve the quality of the generated marketing copy.
+              </p>
+            </div>
+          </div>
+        )}
+        <EmptyState
+          icon={<Sparkles />}
+          title="Marketing materials"
+          description="Generate AI-powered email subject lines, SMS, social captions, poster copy, and more for this event."
+          actionLabel="Generate Marketing Materials"
+          onAction={handleGenerate}
+        />
+      </div>
     )
   }
 

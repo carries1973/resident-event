@@ -141,6 +141,8 @@ export const aiQuickIdeaSchema = z
     description: z.string().min(1, 'Description is required'),
     suggestedLocation: z.string().default(''),
     category: z.string().default(''),
+    whyItWorks: z.string().optional(),
+    estimatedBudget: z.string().optional(),
   })
   .passthrough()
 

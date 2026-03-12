@@ -134,15 +134,33 @@ RULES
 - Campaign sequence must feel connected — same voice and event energy across all three emails
 - Return valid JSON only. No markdown fences, no explanation, no extra text.`
 
+  // Build optional enrichment blocks from event data
+  const setupBlock = event.setupAndSupplies
+    ? `- Setup & Supplies / What to Expect: ${event.setupAndSupplies}`
+    : ''
+  const weatherBlock = event.weatherPlan
+    ? `- Weather / Backup Plan: ${event.weatherPlan}`
+    : ''
+  const budgetBlock = event.budgetEstimate
+    ? `- Budget: ${event.budgetEstimate.tier} tier${event.budgetEstimate.breakdown ? ` — ${event.budgetEstimate.breakdown}` : ''}`
+    : ''
+  const tagsBlock = (event.tags ?? []).length > 0
+    ? `- Tags / Themes: ${(event.tags ?? []).join(', ')}`
+    : ''
+  const rsvpBlock = event.rsvpEnabled
+    ? `- RSVP: Enabled${event.rsvpLimit ? ` (limit: ${event.rsvpLimit} spots)` : ''}`
+    : '- RSVP: Not required'
+
   const user = `Generate a complete marketing campaign package for this resident event:
 
 - Event Name: ${event.name}
 - Date: ${event.date}
 - Time: ${event.startTime}${event.endTime ? ` to ${event.endTime}` : ''}
 - Location: ${event.location || 'TBD'}
-- Description: ${event.description || 'No description provided'}
+- Description: ${event.description || 'No description provided — use the event name and category to infer a compelling description'}
 - Category: ${event.category || 'Community'}
 - Expected Attendance: ${event.rsvpLimit ? `Up to ${event.rsvpLimit} residents` : 'Open to all residents'}
+${setupBlock ? setupBlock + '\n' : ''}${weatherBlock ? weatherBlock + '\n' : ''}${budgetBlock ? budgetBlock + '\n' : ''}${tagsBlock ? tagsBlock + '\n' : ''}${rsvpBlock}
 
 Generate all sections: Comms Kit (5 email subjects, email body, SMS), Campaign Sequence (invitation, reminder, thank you), Marketing Copy (poster, social, visual), and Design Specs.`
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarPlus, Wand2, X, MapPin, Check } from 'lucide-react'
+import { CalendarPlus, Wand2, X, MapPin, Check, Lightbulb, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -66,6 +66,14 @@ export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }:
           {idea.description}
         </p>
 
+        {/* Why it works */}
+        {idea.whyItWorks && (
+          <div className="flex items-start gap-1.5 text-xs text-text-muted bg-surface-hover rounded-md px-2.5 py-1.5">
+            <Lightbulb className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+            <span>{idea.whyItWorks}</span>
+          </div>
+        )}
+
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
           {idea.suggestedLocation && (
@@ -76,6 +84,12 @@ export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }:
           )}
           {idea.category && (
             <Badge variant="outline">{idea.category}</Badge>
+          )}
+          {idea.estimatedBudget && (
+            <Badge variant="outline" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:bg-emerald-950/30">
+              <DollarSign className="h-3 w-3" />
+              {idea.estimatedBudget}
+            </Badge>
           )}
           <span className="text-text-muted italic">Date & time added after saving</span>
         </div>
