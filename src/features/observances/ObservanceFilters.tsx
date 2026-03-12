@@ -27,6 +27,7 @@ const TYPE_OPTIONS = [
   { value: 'cultural', label: 'Cultural' },
   { value: 'religious', label: 'Religious' },
   { value: 'theme', label: 'Seasonal Theme' },
+  { value: 'fun', label: 'Fun Days' },
 ] as const
 
 interface ObservanceFiltersProps {
