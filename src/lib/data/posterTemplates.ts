@@ -200,18 +200,18 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     imagePath: '/poster-templates/BBQ.png',
     thumbnailPath: '/poster-templates/BBQ.png',
     // Cream inner panel in upper 40% has "BBQ Party" template text.
-    // Use a dark solid panel to cover it and provide clean text background.
-    // BBQ grill illustration (Y 480-1000) shows below the panel as a visual accent.
+    // Use a dark solid panel (Y 50-680) to cover it fully and provide clean text background.
+    // BBQ grill illustration still visible below the panel as a visual accent.
     contentPanel: {
-      x: 80, y: 50, width: 920, height: 500,
+      x: 80, y: 50, width: 920, height: 630,
       style: 'dark', radius: 12,
     },
     zones: {
       ...DEFAULT_ZONES,
       logo:         { x: 540, y: 80,  maxWidth: 240, maxHeight: 80,  align: 'center' },
       eventName:    { x: 540, y: 180, maxWidth: 860, align: 'center' },
-      dateTime:     { x: 540, y: 390, maxWidth: 800, align: 'center' },
-      location:     { x: 540, y: 450, maxWidth: 800, align: 'center' },
+      dateTime:     { x: 540, y: 510, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 575, maxWidth: 800, align: 'center' },
       cta:          { x: 540, y: 1100, maxWidth: 680, align: 'center' },
       qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
       buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
