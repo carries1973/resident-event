@@ -269,8 +269,8 @@ function renderCalendarToCanvas(params: {
 
   // ── Grid cells ────────────────────────────────────────────────────────
   const dayNumFontSize = Math.round(cellW * 0.12)
-  const obsFontSize = Math.round(cellW * 0.073)
-  const evtFontSize = Math.round(cellW * 0.073)
+  const obsFontSize = Math.round(cellW * 0.065)
+  const evtFontSize = Math.round(cellW * 0.065)
   const lineH = obsFontSize * 1.45
 
   for (let i = 0; i < numRows * 7; i++) {
@@ -380,6 +380,174 @@ function renderCalendarToCanvas(params: {
 }
 
 /**
+ * Render the legend page (observances + events list) onto a canvas.
+ * Uses the browser's native 2D canvas API for emoji support.
+ */
+function renderLegendToCanvas(params: {
+  observances: NonNullable<CalendarExportParams['observances']>
+  events: CalendarExportParams['events']
+  year: number
+  month: number
+  brandColor: string
+  canvasWidth: number
+  canvasHeight: number
+}): string {
+  const { observances, events, year, month, brandColor, canvasWidth, canvasHeight } = params
+  const monthName = MONTH_NAMES[month - 1]
+
+  const canvas = document.createElement('canvas')
+  canvas.width = canvasWidth
+  canvas.height = canvasHeight
+  const ctx = canvas.getContext('2d')!
+
+  const brandRgb = hexToRgb(brandColor)
+  const brandHex = brandColor
+
+  // Background
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+  const PAD = 40
+  const colGap = 60
+  const colW = (canvasWidth - PAD * 2 - colGap) / 2
+  const leftX = PAD
+  const rightX = PAD + colW + colGap
+
+  const sectionTitleSize = 32
+  const itemSize = 28
+  const lineH = itemSize * 1.6
+  const sectionGapPx = 20
+  const afterSectionGapPx = 12
+
+  const sansFont = `-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+  const emojiFont = `"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ${sansFont}`
+
+  // Filter to this month
+  const monthObs = observances.filter((o) => o.month === month)
+  const monthEvts = events.filter((e) => {
+    const d = new Date(e.date + 'T00:00:00')
+    return d.getFullYear() === year && d.getMonth() + 1 === month
+  })
+
+  // Sort observances
+  const sortedObs = [...monthObs].sort((a, b) => {
+    if (a.day != null && b.day != null) return a.day - b.day
+    if (a.day != null) return -1
+    if (b.day != null) return 1
+    return a.name.localeCompare(b.name)
+  })
+
+  // Sort events
+  const sortedEvts = [...monthEvts].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    return (a.startTime ?? '').localeCompare(b.startTime ?? '')
+  })
+
+  // ── LEFT: Observances ──────────────────────────────────────────────
+  let leftY = 0
+
+  if (sortedObs.length > 0) {
+    // Section title
+    ctx.font = `700 ${sectionTitleSize}px ${sansFont}`
+    ctx.fillStyle = brandHex
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.fillText('Observances', leftX, leftY)
+    leftY += sectionTitleSize + sectionGapPx
+
+    // Underline
+    ctx.strokeStyle = brandHex
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(leftX, leftY)
+    ctx.lineTo(leftX + colW, leftY)
+    ctx.stroke()
+    leftY += afterSectionGapPx + 8
+
+    for (const obs of sortedObs) {
+      if (leftY + lineH > canvasHeight) break
+
+      const dateLabel = obs.day != null
+        ? `${monthName} ${obs.day}`
+        : `All of ${monthName}`
+
+      // Date label (bold, muted)
+      ctx.font = `700 ${itemSize}px ${sansFont}`
+      ctx.fillStyle = '#777777'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      const dateLabelW = ctx.measureText(dateLabel + '  ').width
+      ctx.fillText(dateLabel, leftX, leftY)
+
+      // Emoji (if any)
+      let nameX = leftX + dateLabelW
+      if (obs.emoji) {
+        ctx.font = `${itemSize}px ${emojiFont}`
+        ctx.fillText(obs.emoji, nameX, leftY)
+        nameX += itemSize + 4
+      }
+
+      // Observance name
+      ctx.font = `400 ${itemSize}px ${sansFont}`
+      ctx.fillStyle = '#222222'
+      const nameMaxW = colW - dateLabelW - (obs.emoji ? itemSize + 4 : 0)
+      ctx.fillText(canvasTruncate(ctx, obs.name, nameMaxW), nameX, leftY)
+
+      leftY += lineH
+    }
+  }
+
+  // ── RIGHT: Events ──────────────────────────────────────────────────
+  let rightY = 0
+
+  if (sortedEvts.length > 0) {
+    // Section title
+    ctx.font = `700 ${sectionTitleSize}px ${sansFont}`
+    ctx.fillStyle = brandHex
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+    ctx.fillText('Resident Events', rightX, rightY)
+    rightY += sectionTitleSize + sectionGapPx
+
+    // Underline
+    ctx.strokeStyle = brandHex
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(rightX, rightY)
+    ctx.lineTo(rightX + colW, rightY)
+    ctx.stroke()
+    rightY += afterSectionGapPx + 8
+
+    for (const evt of sortedEvts) {
+      if (rightY + lineH * 2 > canvasHeight) break
+
+      // Event name (bold)
+      ctx.font = `700 ${itemSize}px ${sansFont}`
+      ctx.fillStyle = '#222222'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'top'
+      ctx.fillText(canvasTruncate(ctx, evt.name, colW), rightX, rightY)
+      rightY += itemSize * 1.1
+
+      // Details line
+      const datePart = formatDateShort(evt.date, year)
+      const timePart = evt.startTime && evt.endTime
+        ? `${formatTime(evt.startTime)} – ${formatTime(evt.endTime)}`
+        : evt.startTime ? formatTime(evt.startTime) : ''
+      const locationPart = evt.location || ''
+      const detail = [datePart, timePart, locationPart].filter(Boolean).join('  ·  ')
+
+      ctx.font = `400 ${Math.round(itemSize * 0.85)}px ${sansFont}`
+      ctx.fillStyle = '#666666'
+      ctx.fillText(canvasTruncate(ctx, detail, colW), rightX, rightY)
+      rightY += lineH + 8
+    }
+  }
+
+  return canvas.toDataURL('image/png')
+}
+
+/**
  * Export a monthly calendar as a PDF file.
  *
  * Draws the calendar grid programmatically using the browser's Canvas 2D API
@@ -476,116 +644,25 @@ export async function exportCalendarPDF(
     doc.setLineWidth(0.5 / 72)
     doc.line(margin, margin + 0.65, pageWidth - margin, margin + 0.65)
 
-    // ── Two-column layout ──────────────────────────────────────────
-    const legendTop = margin + 0.8
-    const colGap = 0.3
-    const legendColWidth = (printableWidth - colGap) / 2
-    const leftColX = margin
-    const rightColX = margin + legendColWidth + colGap
+    // ── Canvas-rendered legend (supports emoji) ────────────────────
+    const legendTop = margin + 0.75
+    const legendAreaH = pageHeight - legendTop - margin * 0.8
+    const legendCanvasW = Math.round(printableWidth * DPI)
+    const legendCanvasH = Math.round(legendAreaH * DPI)
 
-    let leftY = legendTop
-    let rightY = legendTop
-
-    const sectionTitleSize = 10
-    const itemFontSize = 9.5
-    const itemLineHeight = 0.2
-    const sectionGap = 0.12
-    const afterSectionGap = 0.08
-
-    // ── LEFT COLUMN: Observances ───────────────────────────────────
-    if (monthObservances.length > 0) {
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(sectionTitleSize)
-      doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
-      doc.text('Observances', leftColX, leftY)
-      leftY += sectionGap
-
-      doc.setDrawColor(brandRgb.r, brandRgb.g, brandRgb.b)
-      doc.setLineWidth(0.5 / 72)
-      doc.line(leftColX, leftY, leftColX + legendColWidth, leftY)
-      leftY += afterSectionGap + 0.05
-
-      const sorted = [...monthObservances].sort((a, b) => {
-        if (a.day != null && b.day != null) return a.day - b.day
-        if (a.day != null) return -1
-        if (b.day != null) return 1
-        return a.name.localeCompare(b.name)
+    try {
+      const legendImg = renderLegendToCanvas({
+        observances,
+        events,
+        year,
+        month,
+        brandColor,
+        canvasWidth: legendCanvasW,
+        canvasHeight: legendCanvasH,
       })
-
-      for (const obs of sorted) {
-        let dateLabel: string
-        if (obs.day != null) {
-          dateLabel = `${monthName} ${obs.day}`
-        } else {
-          dateLabel = `All of ${monthName}`
-        }
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(itemFontSize)
-        const dateLabelWidth = doc.getTextWidth(dateLabel + '  ')
-
-        doc.setTextColor(0x77, 0x77, 0x77)
-        doc.text(dateLabel, leftColX, leftY)
-
-        doc.setTextColor(0x22, 0x22, 0x22)
-        doc.setFont('helvetica', 'normal')
-
-        // Strip emoji from legend text since jsPDF Helvetica can't render them
-        const obsName = truncateText(doc, obs.name, legendColWidth - dateLabelWidth)
-        doc.text(obsName, leftColX + dateLabelWidth, leftY)
-
-        leftY += itemLineHeight
-      }
-    }
-
-    // ── RIGHT COLUMN: Events ───────────────────────────────────────
-    if (monthEvents.length > 0) {
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(sectionTitleSize)
-      doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
-      doc.text('Resident Events', rightColX, rightY)
-      rightY += sectionGap
-
-      doc.setDrawColor(brandRgb.r, brandRgb.g, brandRgb.b)
-      doc.setLineWidth(0.5 / 72)
-      doc.line(rightColX, rightY, rightColX + legendColWidth, rightY)
-      rightY += afterSectionGap + 0.05
-
-      const sortedEvents = [...monthEvents].sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date)
-        const aTime = a.startTime ?? ''
-        const bTime = b.startTime ?? ''
-        if (aTime !== bTime) return aTime.localeCompare(bTime)
-        return a.name.localeCompare(b.name)
-      })
-
-      for (const event of sortedEvents) {
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(itemFontSize)
-        doc.setTextColor(0x22, 0x22, 0x22)
-        const eventNameText = truncateText(doc, event.name, legendColWidth)
-        doc.text(eventNameText, rightColX, rightY)
-        rightY += itemLineHeight * 0.85
-
-        const datePart = formatDateShort(event.date, year)
-        const timePart =
-          event.startTime && event.endTime
-            ? `${formatTime(event.startTime)} – ${formatTime(event.endTime)}`
-            : event.startTime
-              ? formatTime(event.startTime)
-              : ''
-        const locationPart = event.location || ''
-
-        const detailParts = [datePart, timePart, locationPart].filter(Boolean)
-        const detailLine = detailParts.join('  ·  ')
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8.5)
-        doc.setTextColor(0x66, 0x66, 0x66)
-        const detailText = truncateText(doc, detailLine, legendColWidth)
-        doc.text(detailText, rightColX, rightY)
-        rightY += itemLineHeight + 0.04
-      }
+      doc.addImage(legendImg, 'PNG', margin, legendTop, printableWidth, legendAreaH)
+    } catch (err) {
+      console.error('[CalendarPDF] Legend canvas render failed:', err)
     }
 
     // ── Footer ──────────────────────────────────────────────────────
