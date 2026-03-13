@@ -2,17 +2,14 @@
  * Poster Template Registry
  *
  * Each template is a PNG stored in /public/poster-templates/.
- * The app overlays dynamic content (logo, event name, date, location, CTA, QR)
- * at the pixel coordinates defined in each template's `zones` map.
+ * The compositor overlays a unified content panel onto the template's clear zone,
+ * then renders all dynamic content (logo, event name, date, location, CTA, QR)
+ * inside that panel.
  *
- * Safe-zone layout (all Y values at 1080×1400 resolution):
- *   Logo zone:        top-center, Y 60–200px
- *   Event name:       Y 460–720px  (large hero text, 2 lines max)
- *   Date/time:        Y 760–880px
- *   Location:         Y 890–980px
- *   CTA text:         Y 1040–1140px
- *   QR code:          Y 1170–1310px  (right quarter, 140×140px)
- *   Building name:    Y 1330–1370px  (footer)
+ * Content panel approach:
+ *   - Each template defines a `contentPanel` zone (the clear/empty area in the artwork)
+ *   - The compositor draws a semi-transparent panel there, then lays out text inside it
+ *   - This produces clean, professional results regardless of artwork complexity
  *
  * Output formats from each 1080×1400 base:
  *   - Instagram portrait  1080×1400px (as-is)
@@ -45,6 +42,25 @@ export interface PosterTemplateZones {
   buildingName: PosterTemplateZone
 }
 
+/**
+ * Content panel definition — the clear zone in the template artwork where
+ * the compositor draws its unified panel and all text content.
+ */
+export interface ContentPanel {
+  /** X left edge of the panel */
+  x: number
+  /** Y top edge of the panel */
+  y: number
+  /** Panel width */
+  width: number
+  /** Panel height */
+  height: number
+  /** Panel background style */
+  style: 'white' | 'dark' | 'transparent-light' | 'transparent-dark'
+  /** Corner radius */
+  radius?: number
+}
+
 export interface PosterTemplate {
   id: string
   name: string
@@ -56,6 +72,11 @@ export interface PosterTemplate {
   zones: PosterTemplateZones
   /** Whether to use light or dark text overlays depending on artwork darkness */
   overlayScheme: 'light' | 'dark'
+  /**
+   * Content panel — the clear zone where the compositor draws its unified panel.
+   * When defined, the compositor uses this instead of individual backing strips.
+   */
+  contentPanel?: ContentPanel
   tags: string[]
   description: string
 }
@@ -90,52 +111,50 @@ export const POSTER_CATEGORIES: PosterCategoryMeta[] = [
 ]
 
 /**
- * Default safe-zone layout shared across all templates.
- * Individual templates can override specific zones as needed.
+ * Default safe-zone layout — used as a fallback when no contentPanel is defined.
+ * Individual templates override specific zones as needed.
  */
 const DEFAULT_ZONES: PosterTemplateZones = {
   logo: {
     x: 540,
     y: 70,
     maxWidth: 320,
-    maxHeight: 130,
+    maxHeight: 100,
     align: 'center',
   },
-  // Event name pushed lower (Y 560) so it clears the template's own decorative
-  // headline artwork that typically occupies the upper-centre of the design.
   eventName: {
     x: 540,
-    y: 560,
+    y: 220,
     maxWidth: 900,
     align: 'center',
   },
   dateTime: {
     x: 540,
-    y: 800,
+    y: 460,
     maxWidth: 820,
     align: 'center',
   },
   location: {
     x: 540,
-    y: 880,
+    y: 540,
     maxWidth: 820,
     align: 'center',
   },
   cta: {
     x: 540,
-    y: 1060,
+    y: 640,
     maxWidth: 700,
     align: 'center',
   },
   qr: {
     x: 878,
-    y: 1180,
+    y: 760,
     maxWidth: 140,
     maxHeight: 140,
   },
   buildingName: {
     x: 540,
-    y: 1338,
+    y: 940,
     maxWidth: 900,
     align: 'center',
   },
@@ -144,6 +163,9 @@ const DEFAULT_ZONES: PosterTemplateZones = {
 /**
  * All 12 templates registered with their exact filenames as dropped into
  * /public/poster-templates/ by the user.
+ *
+ * Content panel zones are calibrated to each template's clear area.
+ * Panel Y coordinates are measured from the top of the 1400px canvas.
  */
 export const POSTER_TEMPLATES: PosterTemplate[] = [
   {
@@ -152,7 +174,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'movie-night',
     imagePath: '/poster-templates/Movei Night.png',
     thumbnailPath: '/poster-templates/Movei Night.png',
-    zones: { ...DEFAULT_ZONES },
+    // Dark grey background in upper 60%, popcorn in lower 40%
+    contentPanel: {
+      x: 80, y: 60, width: 920, height: 760,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 90,  maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 220, maxWidth: 880, align: 'center' },
+      dateTime:     { x: 540, y: 500, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 580, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 660, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'light',
     tags: ['movies', 'film', 'screening', 'entertainment', 'evening', 'popcorn'],
     description: 'Perfect for rooftop or lounge film screenings.',
@@ -163,8 +199,22 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'bbq-outdoor',
     imagePath: '/poster-templates/BBQ.png',
     thumbnailPath: '/poster-templates/BBQ.png',
-    zones: { ...DEFAULT_ZONES },
-    overlayScheme: 'light',
+    // Cream inner panel in upper 40%, BBQ grill illustration in lower 60%
+    contentPanel: {
+      x: 80, y: 50, width: 920, height: 480,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 70,  maxWidth: 240, maxHeight: 80,  align: 'center' },
+      eventName:    { x: 540, y: 170, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 380, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 450, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 1100, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
+    overlayScheme: 'dark',
     tags: ['bbq', 'grill', 'outdoor', 'summer', 'patio', 'food', 'cookout'],
     description: 'Summer cookout energy. Ideal for patio, rooftop, or courtyard events.',
   },
@@ -174,7 +224,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'community',
     imagePath: '/poster-templates/Book Club.png',
     thumbnailPath: '/poster-templates/Book Club.png',
-    zones: { ...DEFAULT_ZONES },
+    // Bookshelves at top (Y 0-220) and bottom (Y 1100-1400), clear cream middle
+    contentPanel: {
+      x: 80, y: 240, width: 920, height: 820,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 270, maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 390, maxWidth: 880, align: 'center' },
+      dateTime:     { x: 540, y: 660, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 740, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 840, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 960, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1060, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'dark',
     tags: ['book club', 'reading', 'learning', 'discussion', 'community', 'social'],
     description: 'Cozy and inviting. Great for book clubs and discussion groups.',
@@ -185,7 +249,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'seasonal',
     imagePath: '/poster-templates/Cinco De Mayo Party.png',
     thumbnailPath: '/poster-templates/Cinco De Mayo Party.png',
-    zones: { ...DEFAULT_ZONES },
+    // Dark background with maracas at sides, clear upper-centre
+    contentPanel: {
+      x: 80, y: 60, width: 920, height: 760,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 90,  maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 220, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 500, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 580, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 660, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'light',
     tags: ['cinco de mayo', 'fiesta', 'party', 'seasonal', 'celebration', 'cultural'],
     description: 'Festive and vibrant. Perfect for cultural celebrations and themed parties.',
@@ -196,7 +274,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'social',
     imagePath: '/poster-templates/Coffee Event.png',
     thumbnailPath: '/poster-templates/Coffee Event.png',
-    zones: { ...DEFAULT_ZONES },
+    // Tan/beige upper area with decorative frame, coffee photo in lower 40%
+    contentPanel: {
+      x: 80, y: 50, width: 920, height: 780,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 80,  maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 200, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 500, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 580, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 660, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'dark',
     tags: ['coffee', 'morning', 'social', 'meet and greet', 'neighbours', 'casual'],
     description: 'Warm and welcoming. Great for morning coffee socials and meet-and-greets.',
@@ -207,7 +299,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'food-drink',
     imagePath: '/poster-templates/Food Truck.png',
     thumbnailPath: '/poster-templates/Food Truck.png',
-    zones: { ...DEFAULT_ZONES },
+    // Colourful illustration — use dark panel overlay
+    contentPanel: {
+      x: 80, y: 60, width: 920, height: 760,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 90,  maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 220, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 500, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 580, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 660, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'light',
     tags: ['food truck', 'food', 'outdoor', 'vendors', 'community', 'lunch'],
     description: 'Fun and casual. Perfect for food truck pop-ups and outdoor dining events.',
@@ -218,7 +324,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'game-night',
     imagePath: '/poster-templates/Game Night.png',
     thumbnailPath: '/poster-templates/Game Night.png',
-    zones: { ...DEFAULT_ZONES, eventName: { ...DEFAULT_ZONES.eventName, y: 590 } },
+    // Dark navy background, game pieces at corners and bottom
+    contentPanel: {
+      x: 80, y: 180, width: 920, height: 700,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 210, maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 330, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 600, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 680, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 760, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'light',
     tags: ['games', 'trivia', 'board games', 'social', 'evening', 'fun', 'tournament'],
     description: 'Bold and playful. Perfect for trivia, board game nights, or tournaments.',
@@ -229,7 +349,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'family',
     imagePath: '/poster-templates/Garden Club.png',
     thumbnailPath: '/poster-templates/Garden Club.png',
-    zones: { ...DEFAULT_ZONES },
+    // Light beige texture throughout, garden items scattered in lower area
+    contentPanel: {
+      x: 80, y: 50, width: 920, height: 480,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 70,  maxWidth: 260, maxHeight: 80,  align: 'center' },
+      eventName:    { x: 540, y: 170, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 380, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 450, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 1100, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'dark',
     tags: ['garden', 'plants', 'nature', 'outdoor', 'wellness', 'family', 'spring'],
     description: 'Fresh and natural. Ideal for gardening, plant swaps, and outdoor events.',
@@ -240,7 +374,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'seasonal',
     imagePath: '/poster-templates/Mothers Day.png',
     thumbnailPath: '/poster-templates/Mothers Day.png',
-    zones: { ...DEFAULT_ZONES },
+    // Floral illustration — use light panel
+    contentPanel: {
+      x: 80, y: 60, width: 920, height: 760,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 90,  maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 220, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 500, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 580, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 660, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'light',
     tags: ["mother's day", 'mothers', 'spring', 'celebration', 'family', 'appreciation'],
     description: "Elegant and heartfelt. Perfect for Mother's Day and appreciation events.",
@@ -251,7 +399,21 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'community',
     imagePath: '/poster-templates/Pet Appreciation.png',
     thumbnailPath: '/poster-templates/Pet Appreciation.png',
-    zones: { ...DEFAULT_ZONES },
+    // Dark background with pet illustrations
+    contentPanel: {
+      x: 80, y: 60, width: 920, height: 760,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 90,  maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 220, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 500, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 580, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 660, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
     overlayScheme: 'light',
     tags: ['pets', 'dogs', 'cats', 'community', 'fun', 'family', 'social'],
     description: 'Fun and friendly. Great for pet meetups and animal appreciation events.',
@@ -262,8 +424,22 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'food-drink',
     imagePath: '/poster-templates/Pizza Party.png',
     thumbnailPath: '/poster-templates/Pizza Party.png',
-    zones: { ...DEFAULT_ZONES },
-    overlayScheme: 'light',
+    // White/orange border, pizza illustration at bottom (Y 850+)
+    contentPanel: {
+      x: 80, y: 50, width: 920, height: 780,
+      style: 'transparent-dark', radius: 0,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 80,  maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 200, maxWidth: 860, align: 'center' },
+      dateTime:     { x: 540, y: 500, maxWidth: 800, align: 'center' },
+      location:     { x: 540, y: 580, maxWidth: 800, align: 'center' },
+      cta:          { x: 540, y: 660, maxWidth: 680, align: 'center' },
+      qr:           { x: 878, y: 1220, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1360, maxWidth: 900, align: 'center' },
+    },
+    overlayScheme: 'dark',
     tags: ['pizza', 'party', 'food', 'social', 'casual', 'fun', 'neighbours'],
     description: 'Casual and fun. Perfect for resident pizza nights and casual socials.',
   },
@@ -273,8 +449,22 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     category: 'bbq-outdoor',
     imagePath: '/poster-templates/Pool Party.png',
     thumbnailPath: '/poster-templates/Pool Party.png',
-    zones: { ...DEFAULT_ZONES },
-    overlayScheme: 'light',
+    // Full illustration (pool water + palm trees) — use white panel overlay
+    contentPanel: {
+      x: 100, y: 280, width: 880, height: 680,
+      style: 'white', radius: 24,
+    },
+    zones: {
+      ...DEFAULT_ZONES,
+      logo:         { x: 540, y: 310, maxWidth: 280, maxHeight: 90,  align: 'center' },
+      eventName:    { x: 540, y: 430, maxWidth: 820, align: 'center' },
+      dateTime:     { x: 540, y: 680, maxWidth: 780, align: 'center' },
+      location:     { x: 540, y: 760, maxWidth: 780, align: 'center' },
+      cta:          { x: 540, y: 840, maxWidth: 660, align: 'center' },
+      qr:           { x: 878, y: 960, maxWidth: 130, maxHeight: 130 },
+      buildingName: { x: 540, y: 1080, maxWidth: 860, align: 'center' },
+    },
+    overlayScheme: 'dark',
     tags: ['pool', 'summer', 'outdoor', 'party', 'swimming', 'social', 'hot weather'],
     description: 'Cool and vibrant. Ideal for summer pool parties and outdoor water events.',
   },

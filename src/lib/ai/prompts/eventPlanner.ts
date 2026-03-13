@@ -16,6 +16,40 @@ interface PlannerPromptParams {
 }
 
 /**
+ * Budget tier definitions — explicit dollar ranges and constraints
+ * passed verbatim into the AI prompt so the model cannot drift.
+ */
+const BUDGET_TIER_DEFINITIONS: Record<string, string> = {
+  low: `LOW BUDGET TIER — Total per event: $0–$150 CAD
+  - Supplies & materials: $0–$75
+  - Food & beverages: $0–$50 (coffee/tea, light snacks only — NO catered meals)
+  - Rentals/equipment: $0–$25 (use only what the building already owns)
+  - Staffing: volunteer or existing staff only (no paid external staff)
+  - Venue: in-building only (no external venue hire fees)
+  - Prohibited: catered food, hired entertainers, paid performers, alcohol, external AV rental
+  - Examples: board game night, potluck, movie screening with existing projector, walking tour`,
+
+  moderate: `MODERATE BUDGET TIER — Total per event: $150–$750 CAD
+  - Supplies & materials: $50–$200
+  - Food & beverages: $100–$350 (light catering, appetizers, non-alcoholic beverages)
+  - Rentals/equipment: $0–$100 (minor AV, tables, chairs if needed)
+  - Staffing: 1 external vendor or facilitator is acceptable
+  - Venue: in-building preferred; off-site only if free/low-cost public venue
+  - Alcohol: only if building policy permits and proper permits are obtained
+  - Prohibited: full catered dinners, paid headline entertainers, venue hire fees over $200
+  - Examples: BBQ social, fitness class, craft workshop, trivia night with prizes`,
+
+  premium: `PREMIUM BUDGET TIER — Total per event: $750–$2,500 CAD
+  - Supplies & materials: $100–$400
+  - Food & beverages: $300–$1,000 (full catering, cocktail reception, or dinner)
+  - Rentals/equipment: $100–$500 (AV, lighting, décor, furniture)
+  - Staffing: multiple vendors, entertainers, or professional facilitators acceptable
+  - Venue: in-building or external venue hire acceptable
+  - Alcohol: acceptable with proper permits and responsible service
+  - Examples: holiday gala, rooftop cocktail party, professional cooking class, live music event`,
+}
+
+/**
  * Generates the system prompt for the AI Event Planner.
  *
  * Aligned to REP v3.3 (Resident Event Planner CustomGPT specification):
@@ -26,6 +60,7 @@ interface PlannerPromptParams {
  * - Calendar context with observances and local events
  * - Compliance checks (accessibility, privacy, Canadian English)
  * - Venue rules: in-building amenities only, off-site from nearby venues only
+ * - Explicit budget guardrails with dollar ranges per tier
  */
 export function buildEventPlannerPrompt(params: PlannerPromptParams): string {
   const {
@@ -42,6 +77,7 @@ export function buildEventPlannerPrompt(params: PlannerPromptParams): string {
   } = params
 
   const budgetTier = budgetTierOverride ?? building.defaultBudgetTier
+  const budgetDefinition = BUDGET_TIER_DEFINITIONS[budgetTier] ?? BUDGET_TIER_DEFINITIONS['moderate']
   const amenitiesList = [...(building.amenities ?? []), ...(building.customAmenities ?? [])]
   const nearbyVenuesList = building.nearbyVenues ?? []
 
@@ -74,6 +110,10 @@ export function buildEventPlannerPrompt(params: PlannerPromptParams): string {
     ? `\nPREFERRED THEMES (USER-PROVIDED):\n${themes.map((t) => `- ${t}`).join('\n')}\n`
     : ''
 
+  const budgetNotesBlock = building.budgetNotes
+    ? `\nBUDGET NOTES (USER-PROVIDED):\n${building.budgetNotes}\n`
+    : ''
+
   return `You are the Resident Event Planner (REP) for ${building.name} in ${building.city}, ${building.province}, Canada.
 You are a fully scoped, compliance-first event planning assistant for Canadian residential property managers. You deliver complete, inclusive, seasonal event programs that match building amenities, local context, resident mix, and operational constraints.
 
@@ -88,13 +128,30 @@ CONTEXT
 - Resident Mix: ${residentMixValue} [${residentMixLabel}]${building.secondaryResidentGroup ? `\n  Secondary: ${building.secondaryResidentGroup} [USER-PROVIDED]` : ''}
 - Available Amenities: ${amenitiesValue} [${amenitiesLabel}]
 - Brand Tone: ${(building.brandTones ?? []).length > 0 ? (building.brandTones ?? []).join(', ') + ' [USER-PROVIDED]' : 'Professional and welcoming [AI-INFERRED]'}
-- Budget Tier: ${budgetTier} [${budgetTierOverride ? 'USER-PROVIDED override' : 'USER-PROVIDED default'}]
+- Budget Tier: ${budgetTier.toUpperCase()} [${budgetTierOverride ? 'USER-PROVIDED override for this run' : 'USER-PROVIDED building default'}]
 - Weather Context: Infer based on ${building.city} and the timeframe [AI-INFERRED]
 ${(building.preferredEventDays ?? []).length > 0 ? `- Preferred Event Days: ${(building.preferredEventDays ?? []).join(', ')} [USER-PROVIDED]` : ''}
 ${building.staffCapacity ? `- Staff Capacity: ${building.staffCapacity} [USER-PROVIDED]` : ''}
 ${building.noiseRestrictions ? `- Noise Restrictions: ${building.noiseRestrictions} [USER-PROVIDED]` : ''}
 ${building.accessibilityNotes ? `- Building Accessibility: ${building.accessibilityNotes} [USER-PROVIDED]` : ''}
-${nearbyVenuesBlock}${localEventsBlock}${observanceBlock}${themesBlock}
+${nearbyVenuesBlock}${localEventsBlock}${observanceBlock}${themesBlock}${budgetNotesBlock}
+═══════════════════════════════════════════════════════════════
+BUDGET GUARDRAILS — CRITICAL — READ CAREFULLY
+═══════════════════════════════════════════════════════════════
+
+The budget tier for this run is: ${budgetTier.toUpperCase()}
+
+${budgetDefinition}
+
+BUDGET ENFORCEMENT RULES (non-negotiable):
+1. Every event's budgetEstimate.amount MUST fall within the dollar range for the ${budgetTier} tier above.
+2. The budgetEstimate.breakdown MUST itemise each cost line (supplies, food, rentals, staffing).
+3. Do NOT suggest items that are explicitly prohibited for the ${budgetTier} tier.
+4. If a theme or activity would naturally exceed the tier budget, scale it down or substitute
+   a lower-cost alternative — do NOT exceed the budget ceiling.
+5. The sum of all line items in the breakdown MUST equal the budgetEstimate.amount.
+6. Flag any budget tension in the internalNotes.complianceNotes field.
+
 ═══════════════════════════════════════════════════════════════
 EVENT GENERATION RULES
 ═══════════════════════════════════════════════════════════════
@@ -115,7 +172,7 @@ VENUE RULES (CRITICAL):
 
 EVENT QUALITY RULES:
 4. Match the resident mix — events should appeal to ${residentMixValue}
-5. Align with the ${budgetTier} budget tier
+5. Strictly align with the ${budgetTier.toUpperCase()} budget tier (see guardrails above)
 6. Include a weather/backup plan appropriate for ${building.city}
 7. Be accessible and inclusive
 8. Use Canadian English spelling and date formatting (Month D, YYYY)
@@ -143,7 +200,11 @@ Return a single JSON object with the following top-level keys:
       "tags": ["string"],
       "setupAndSupplies": "string",
       "staffing": "string",
-      "budgetEstimate": { "tier": "${budgetTier}", "amount": 0, "breakdown": "string" },
+      "budgetEstimate": {
+        "tier": "${budgetTier}",
+        "amount": 0,
+        "breakdown": "string — itemised line items that sum to amount (e.g., Supplies $80 + Snacks $120 + Staffing $0 = $200)"
+      },
       "weatherPlan": "string",
       "accessibilityNotes": "string",
       "measurementPlan": "string",
@@ -161,7 +222,7 @@ Return a single JSON object with the following top-level keys:
     "residentMixSource": "string — where resident mix came from (USER-PROVIDED or AI-INFERRED)",
     "localSearchNotes": "string — what local event sources were checked, how many verified",
     "neighbourhoodNotes": "string — nearby venue sources and verification status",
-    "complianceNotes": "string — accessibility, privacy (no PII), alcohol/waiver considerations, Canadian English confirmed",
+    "complianceNotes": "string — budget compliance, accessibility, privacy (no PII), alcohol/waiver considerations, Canadian English confirmed",
     "weatherAssumptions": "string — weather assumptions made for the city and timeframe"
   },
   "preflightCheck": {
@@ -185,7 +246,8 @@ Before generating your response, verify:
 - Local context and neighbourhood info included where available
 - At least ${eventCount} fully scoped events with all required fields
 - Calendar context includes observances and local events
-- Budget estimates and weather fallback plans present for each event
+- Budget estimates are within the ${budgetTier.toUpperCase()} tier dollar range and line items sum correctly
+- Weather fallback plans present for each event
 - All facts labeled (USER-PROVIDED, AI-INFERRED, VERIFIED, UNKNOWN)
 - No internal-only data appears in resident-facing descriptions
 - Canadian English spelling throughout (colour, centre, neighbourhood, favourite)

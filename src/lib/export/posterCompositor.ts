@@ -1,8 +1,14 @@
 /**
- * Poster Compositor
+ * Poster Compositor — v2
  *
  * Canvas-based compositing engine that stamps dynamic event content
  * onto a static PNG template at 1080×1400px.
+ *
+ * Design approach:
+ *   1. Draw the template background image
+ *   2. If the template has a contentPanel, draw a clean panel over the clear zone
+ *   3. Render all text content inside the panel with proper hierarchy
+ *   4. No individual backing strips — clean text with proper shadow/contrast
  *
  * Produces multiple output formats from a single composite:
  *   - Full portrait  1080×1400  (Instagram portrait, Facebook, lobby print)
@@ -12,8 +18,7 @@
  *
  * Text rendering uses system fonts via Canvas 2D API.
  * Building logo is composited from the stored data URL.
- * QR code placeholder is drawn as a grid pattern (real QR generation
- * can be added in Phase 2 via qrcode.react or similar).
+ * QR code placeholder is drawn as a grid pattern.
  */
 
 import { jsPDF } from 'jspdf'
@@ -37,11 +42,11 @@ export type CropKey = keyof typeof CROPS
 
 // ── Font sizes (at 1080px canvas width) ──────────────────────────
 const FONT = {
-  eventName:    { size: 96, weight: '800', family: 'DM Sans, Inter, system-ui, sans-serif' },
-  dateTime:     { size: 46, weight: '600', family: 'DM Sans, Inter, system-ui, sans-serif' },
-  location:     { size: 38, weight: '400', family: 'DM Sans, Inter, system-ui, sans-serif' },
-  cta:          { size: 52, weight: '700', family: 'DM Sans, Inter, system-ui, sans-serif' },
-  buildingName: { size: 30, weight: '400', family: 'DM Sans, Inter, system-ui, sans-serif' },
+  eventName:    { size: 92, weight: '800', family: '"DM Sans", "Inter", system-ui, sans-serif' },
+  dateTime:     { size: 44, weight: '600', family: '"DM Sans", "Inter", system-ui, sans-serif' },
+  location:     { size: 36, weight: '400', family: '"DM Sans", "Inter", system-ui, sans-serif' },
+  cta:          { size: 50, weight: '700', family: '"DM Sans", "Inter", system-ui, sans-serif' },
+  buildingName: { size: 28, weight: '400', family: '"DM Sans", "Inter", system-ui, sans-serif' },
 }
 
 // ── Options ───────────────────────────────────────────────────────
@@ -93,62 +98,80 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
   // 1. Draw the template background image
   await drawTemplateBackground(ctx, opts.template.imagePath)
 
-  // 2. Determine overlay text colour based on template scheme
-  const textColor    = opts.template.overlayScheme === 'light' ? '#FFFFFF' : '#1A1D2E'
-  const subTextColor = opts.template.overlayScheme === 'light' ? 'rgba(255,255,255,0.82)' : 'rgba(26,29,46,0.72)'
+  // 2. Draw content panel (if defined) — clean overlay for text area
+  const panel = opts.template.contentPanel
+  if (panel) {
+    drawContentPanel(ctx, panel)
+  }
 
-  // 3. Composite each dynamic zone
+  // 3. Determine text colours based on template overlay scheme
+  const scheme = opts.template.overlayScheme
+  const textColor    = scheme === 'light' ? '#FFFFFF' : '#1A1D2E'
+  const subTextColor = scheme === 'light' ? 'rgba(255,255,255,0.90)' : 'rgba(26,29,46,0.80)'
+  const shadowColor  = scheme === 'light' ? 'rgba(0,0,0,0.60)' : 'rgba(0,0,0,0.15)'
+
+  // For panels with white/light background, always use dark text
+  const panelStyle = panel?.style
+  const usesDarkText = panelStyle === 'white' || panelStyle === 'transparent-light' || scheme === 'dark'
+  const finalTextColor    = usesDarkText ? '#1A1D2E' : '#FFFFFF'
+  const finalSubTextColor = usesDarkText ? 'rgba(26,29,46,0.80)' : 'rgba(255,255,255,0.90)'
+  const finalShadow       = usesDarkText ? undefined : shadowColor
+
   const zones = opts.template.zones
 
-  // Event name — hero text (may wrap to 2 lines)
-  // Draw a strong backing strip so the event name is always legible over busy artwork
-  drawTextBackingStrip(ctx, opts.eventName, zones.eventName, FONT.eventName.size, opts.template.overlayScheme, 1.15)
-  drawWrappedText(ctx, opts.eventName, zones.eventName, {
-    ...FONT.eventName,
-    color: textColor,
-    lineHeight: 1.15,
-    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.30)',
-  })
-
-  // Date + time — draw a semi-transparent backing strip for readability
-  if (opts.dateTime) {
-    drawTextBackingStrip(ctx, opts.dateTime, zones.dateTime, FONT.dateTime.size, opts.template.overlayScheme)
-  }
-  drawWrappedText(ctx, opts.dateTime, zones.dateTime, {
-    ...FONT.dateTime,
-    color: subTextColor,
-    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.30)',
-  })
-
-  // Location — backing strip for readability
-  if (opts.location) {
-    drawTextBackingStrip(ctx, opts.location, zones.location, FONT.location.size, opts.template.overlayScheme)
-  }
-  drawWrappedText(ctx, opts.location, zones.location, {
-    ...FONT.location,
-    color: subTextColor,
-    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.25)',
-  })
-
-  // CTA — use brand colour pill background
-  drawCtaPill(ctx, opts.cta, zones.cta, opts.brandColor, opts.template.overlayScheme)
-
-  // Building name (footer)
-  drawWrappedText(ctx, opts.buildingName, zones.buildingName, {
-    ...FONT.buildingName,
-    color: subTextColor,
-    shadowColor: opts.template.overlayScheme === 'light' ? 'rgba(0,0,0,0.20)' : undefined,
-  })
-
-  // QR code placeholder
-  if (opts.showQrPlaceholder !== false) {
-    drawQrPlaceholder(ctx, zones.qr, opts.brandColor, opts.template.overlayScheme)
-  }
-
-  // Building logo (drawn last so it sits on top)
+  // 4. Building logo
   if (opts.logoDataUrl) {
     await drawLogo(ctx, opts.logoDataUrl, zones.logo)
   }
+
+  // 5. Event name — large hero text
+  drawWrappedText(ctx, opts.eventName, zones.eventName, {
+    ...FONT.eventName,
+    color: finalTextColor,
+    lineHeight: 1.12,
+    shadowColor: finalShadow,
+  })
+
+  // 6. Accent divider line below event name
+  const nameLines = estimateLineCount(ctx, opts.eventName, zones.eventName.maxWidth, FONT.eventName.size)
+  const dividerY = zones.eventName.y + nameLines * FONT.eventName.size * 1.12 + 24
+  if (dividerY < zones.dateTime.y - 20) {
+    drawAccentDivider(ctx, dividerY, opts.brandColor, usesDarkText)
+  }
+
+  // 7. Date/time
+  if (opts.dateTime) {
+    drawWrappedText(ctx, opts.dateTime, zones.dateTime, {
+      ...FONT.dateTime,
+      color: finalSubTextColor,
+      shadowColor: finalShadow,
+    })
+  }
+
+  // 8. Location
+  if (opts.location) {
+    const locationText = `📍 ${opts.location}`
+    drawWrappedText(ctx, locationText, zones.location, {
+      ...FONT.location,
+      color: finalSubTextColor,
+      shadowColor: finalShadow,
+    })
+  }
+
+  // 9. CTA pill — always uses brand colour
+  drawCtaPill(ctx, opts.cta, zones.cta, opts.brandColor)
+
+  // 10. QR code placeholder
+  if (opts.showQrPlaceholder !== false) {
+    drawQrPlaceholder(ctx, zones.qr, opts.brandColor, scheme)
+  }
+
+  // 11. Building name footer
+  drawWrappedText(ctx, opts.buildingName, zones.buildingName, {
+    ...FONT.buildingName,
+    color: finalSubTextColor,
+    shadowColor: finalShadow,
+  })
 
   // ── Export helpers ───────────────────────────────────────────────
 
@@ -235,14 +258,12 @@ async function drawTemplateBackground(
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, POSTER_WIDTH, POSTER_HEIGHT)
 
-    // Dashed border to indicate placeholder
     ctx.setLineDash([20, 12])
     ctx.strokeStyle = 'rgba(255,255,255,0.15)'
     ctx.lineWidth = 4
     ctx.strokeRect(30, 30, POSTER_WIDTH - 60, POSTER_HEIGHT - 60)
     ctx.setLineDash([])
 
-    // Placeholder label
     ctx.fillStyle = 'rgba(255,255,255,0.3)'
     ctx.font = '28px DM Sans, system-ui, sans-serif'
     ctx.textAlign = 'center'
@@ -250,6 +271,75 @@ async function drawTemplateBackground(
     ctx.font = '22px DM Sans, system-ui, sans-serif'
     ctx.fillText('Place your PNG in /public/poster-templates/', POSTER_WIDTH / 2, POSTER_HEIGHT / 2 + 20)
   }
+}
+
+/**
+ * Draws the unified content panel over the template's clear zone.
+ * This replaces the old per-element backing strips.
+ */
+function drawContentPanel(
+  ctx: CanvasRenderingContext2D,
+  panel: NonNullable<import('@/lib/data/posterTemplates').PosterTemplate['contentPanel']>,
+): void {
+  const { x, y, width, height, style, radius = 0 } = panel
+
+  ctx.save()
+
+  let bg: string
+  switch (style) {
+    case 'white':
+      bg = 'rgba(255,255,255,0.92)'
+      break
+    case 'dark':
+      bg = 'rgba(15,17,30,0.88)'
+      break
+    case 'transparent-light':
+      bg = 'rgba(255,255,255,0.15)'
+      break
+    case 'transparent-dark':
+    default:
+      // No panel — text will render directly on the template with shadows
+      ctx.restore()
+      return
+  }
+
+  ctx.fillStyle = bg
+
+  if (radius > 0) {
+    roundRect(ctx, x, y, width, height, radius)
+    ctx.fill()
+
+    // Subtle border for white panels
+    if (style === 'white') {
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)'
+      ctx.lineWidth = 2
+      ctx.stroke()
+    }
+  } else {
+    ctx.fillRect(x, y, width, height)
+  }
+
+  ctx.restore()
+}
+
+/**
+ * Draws a thin accent divider line below the event name.
+ */
+function drawAccentDivider(
+  ctx: CanvasRenderingContext2D,
+  y: number,
+  brandColor: string,
+  darkMode: boolean,
+): void {
+  ctx.save()
+  ctx.strokeStyle = darkMode ? brandColor : 'rgba(255,255,255,0.50)'
+  ctx.lineWidth = 3
+  ctx.globalAlpha = 0.60
+  ctx.beginPath()
+  ctx.moveTo(160, y)
+  ctx.lineTo(POSTER_WIDTH - 160, y)
+  ctx.stroke()
+  ctx.restore()
 }
 
 interface TextOptions {
@@ -279,7 +369,7 @@ function drawWrappedText(
 
   if (opts.shadowColor) {
     ctx.shadowColor   = opts.shadowColor
-    ctx.shadowBlur    = 8
+    ctx.shadowBlur    = 10
     ctx.shadowOffsetY = 2
   }
 
@@ -315,12 +405,38 @@ function drawWrappedText(
   ctx.restore()
 }
 
+/**
+ * Estimates how many lines a text block will wrap to.
+ */
+function estimateLineCount(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+): number {
+  ctx.save()
+  ctx.font = `800 ${fontSize}px "DM Sans", "Inter", system-ui, sans-serif`
+  const words = text.split(' ')
+  let lines = 1
+  let current = ''
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word
+    if (ctx.measureText(test).width <= maxWidth) {
+      current = test
+    } else {
+      lines++
+      current = word
+    }
+  }
+  ctx.restore()
+  return Math.min(lines, 3)
+}
+
 function drawCtaPill(
   ctx: CanvasRenderingContext2D,
   text: string,
   zone: PosterTemplateZone,
   brandColor: string,
-  _scheme: 'light' | 'dark',
 ): void {
   if (!text) return
 
@@ -338,6 +454,11 @@ function drawCtaPill(
   const pillY    = zone.y
   const radius   = pillH / 2
 
+  // Drop shadow for the pill
+  ctx.shadowColor   = 'rgba(0,0,0,0.25)'
+  ctx.shadowBlur    = 16
+  ctx.shadowOffsetY = 4
+
   // Pill background
   ctx.beginPath()
   ctx.moveTo(pillX + radius, pillY)
@@ -354,9 +475,10 @@ function drawCtaPill(
   ctx.fill()
 
   // CTA text (white on coloured pill always reads well)
-  ctx.fillStyle = '#FFFFFF'
   ctx.shadowColor  = 'rgba(0,0,0,0.20)'
   ctx.shadowBlur   = 4
+  ctx.shadowOffsetY = 1
+  ctx.fillStyle = '#FFFFFF'
   ctx.fillText(text, zone.x, zone.y + pillH / 2, zone.maxWidth - 48)
 
   ctx.restore()
@@ -368,21 +490,25 @@ function drawQrPlaceholder(
   _brandColor: string,
   scheme: 'light' | 'dark',
 ): void {
-  const size = Math.min(zone.maxWidth ?? 140, zone.maxHeight ?? 140)
+  const size = Math.min(zone.maxWidth ?? 130, zone.maxHeight ?? 130)
   const x    = zone.x
   const y    = zone.y
 
   ctx.save()
 
   // Background
-  const bg = scheme === 'light' ? 'rgba(255,255,255,0.92)' : 'rgba(26,29,46,0.88)'
+  const bg = 'rgba(255,255,255,0.95)'
   ctx.fillStyle = bg
+  ctx.shadowColor   = 'rgba(0,0,0,0.15)'
+  ctx.shadowBlur    = 8
+  ctx.shadowOffsetY = 2
   ctx.beginPath()
-  roundRect(ctx, x, y, size, size, 12)
+  roundRect(ctx, x, y, size, size, 10)
   ctx.fill()
+  ctx.shadowColor = 'transparent'
 
-  // QR grid pattern (5×5 simplified representation)
-  const fg = scheme === 'light' ? '#1A1D2E' : '#FFFFFF'
+  // QR grid pattern (7×7 simplified representation)
+  const fg = '#1A1D2E'
   ctx.fillStyle = fg
   const cell  = (size - 20) / 7
   const grid  = [
@@ -407,9 +533,9 @@ function drawQrPlaceholder(
     }
   }
 
-  // "SCAN" label
-  ctx.fillStyle = scheme === 'light' ? 'rgba(26,29,46,0.6)' : 'rgba(255,255,255,0.6)'
-  ctx.font = '18px DM Sans, system-ui, sans-serif'
+  // "RSVP" label below QR
+  ctx.fillStyle = scheme === 'light' ? 'rgba(255,255,255,0.80)' : 'rgba(26,29,46,0.60)'
+  ctx.font = '18px "DM Sans", system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
   ctx.fillText('RSVP', x + size / 2, y + size + 6)
@@ -425,7 +551,7 @@ async function drawLogo(
   try {
     const img = await loadImage(dataUrl)
     const maxW = zone.maxWidth
-    const maxH = zone.maxHeight ?? 130
+    const maxH = zone.maxHeight ?? 100
     const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1)
     const w = img.naturalWidth  * scale
     const h = img.naturalHeight * scale
@@ -447,58 +573,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = () => reject(new Error(`Failed to load image: ${src}`))
     img.src = src
   })
-}
-
-/**
- * Draws a semi-transparent pill/strip behind text zones so dynamic text is
- * always legible regardless of the template artwork underneath.
- */
-function drawTextBackingStrip(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  zone: PosterTemplateZone,
-  fontSize: number,
-  scheme: 'light' | 'dark',
-  lineHeight = 1.25,
-): void {
-  if (!text) return
-  ctx.save()
-
-  ctx.font = `800 ${fontSize}px DM Sans, Inter, system-ui, sans-serif`
-  const words = text.split(' ')
-  const lines: string[] = []
-  let current = ''
-  for (const word of words) {
-    const test = current ? `${current} ${word}` : word
-    if (ctx.measureText(test).width <= zone.maxWidth) {
-      current = test
-    } else {
-      if (current) lines.push(current)
-      current = word
-    }
-  }
-  if (current) lines.push(current)
-  const displayLines = lines.slice(0, 3)
-
-  const lineH = fontSize * lineHeight
-  const blockH = lineH * displayLines.length
-  const blockW = Math.min(
-    Math.max(...displayLines.map((l) => ctx.measureText(l).width)),
-    zone.maxWidth,
-  ) + 48
-
-  const stripX = zone.x - blockW / 2
-  const stripY = zone.y - 12
-  const stripH = blockH + 24
-
-  const bg = scheme === 'light'
-    ? 'rgba(0,0,0,0.38)'
-    : 'rgba(255,255,255,0.30)'
-  ctx.fillStyle = bg
-  roundRect(ctx, stripX, stripY, blockW, stripH, 12)
-  ctx.fill()
-
-  ctx.restore()
 }
 
 /** Draws a rounded rectangle path (no fill/stroke — caller handles that) */

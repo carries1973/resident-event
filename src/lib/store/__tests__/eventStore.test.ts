@@ -366,14 +366,29 @@ describe('computeEventStatus', () => {
     expect(computeEventStatus(event)).toBe('needs_closeout')
   })
 
-  it('keeps active status when end time has not passed', () => {
-    // Use tomorrow's date
+  it('shows active event with future date as scheduled (event has not started yet)', () => {
+    // An event manually set to 'active' but with a future date should display
+    // as 'scheduled' — it hasn't started yet. This is the correct business logic:
+    // computeEventStatus guards against stale 'active' status for future events.
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     const isoTomorrow = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
     const event = createTestEvent({
       status: 'active',
       date: isoTomorrow,
+      endTime: '23:59',
+    })
+    // Future-dated active events are guarded back to 'scheduled' display
+    expect(computeEventStatus(event)).toBe('scheduled')
+  })
+
+  it('keeps active status for an event happening today before end time', () => {
+    // An active event on today's date with a future end time should stay active
+    const today = new Date()
+    const isoToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const event = createTestEvent({
+      status: 'active',
+      date: isoToday,
       endTime: '23:59',
     })
     expect(computeEventStatus(event)).toBe('active')
