@@ -481,6 +481,7 @@ function renderLegendToCanvas(params: {
 
       // Emoji (if any)
       let nameX = leftX + dateLabelW
+      console.log('[LegendCanvas] obs:', JSON.stringify({ name: obs.name, emoji: obs.emoji, hasEmoji: Boolean(obs.emoji) }))
       if (obs.emoji) {
         ctx.font = `${itemSize}px ${emojiFont}`
         ctx.fillText(obs.emoji, nameX, leftY)
