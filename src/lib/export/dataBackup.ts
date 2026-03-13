@@ -10,6 +10,7 @@
  *   - rei-local-events-v1
  */
 
+/** All persisted localStorage keys used by the app */
 const STORE_KEYS = [
   'rei-app-store',
   'rei-building-store',
@@ -19,19 +20,15 @@ const STORE_KEYS = [
   'rei-quick-ideas-sessions',
 ] as const
 
+type StoreKey = typeof STORE_KEYS[number]
+
 /** Current backup format version */
 const BACKUP_VERSION = 1
 
 interface BackupPayload {
   version: number
   exportedAt: string
-  data: {
-    app: unknown
-    buildings: unknown
-    events: unknown
-    notifications: unknown
-    localEvents?: unknown
-  }
+  data: Partial<Record<StoreKey, unknown>>
 }
 
 /**
@@ -51,16 +48,15 @@ export function exportAllData(): string {
     }
   }
 
+  const data: Partial<Record<StoreKey, unknown>> = {}
+  for (const key of STORE_KEYS) {
+    data[key] = readStore(key)
+  }
+
   const payload: BackupPayload = {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: {
-      app: readStore('rei-app-store'),
-      buildings: readStore('rei-building-store'),
-      events: readStore('rei-event-store'),
-      notifications: readStore('rei-notification-store'),
-      localEvents: readStore('rei-local-events-v1'),
-    },
+    data,
   }
 
   return JSON.stringify(payload, null, 2)
@@ -106,13 +102,8 @@ export function importAllData(json: string): { success: boolean; error?: string 
   }
 
   // Write each store back to localStorage
-  const storeMap: Record<string, unknown> = {
-    'rei-app-store': parsed.data.app,
-    'rei-building-store': parsed.data.buildings,
-    'rei-event-store': parsed.data.events,
-    'rei-notification-store': parsed.data.notifications,
-    'rei-local-events-v1': parsed.data.localEvents,
-  }
+  // parsed.data is a Partial<Record<StoreKey, unknown>> — keys are the actual localStorage keys
+  const storeMap: Record<string, unknown> = parsed.data as Record<string, unknown>
 
   try {
     for (const [key, value] of Object.entries(storeMap)) {

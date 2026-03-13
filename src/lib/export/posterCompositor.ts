@@ -106,8 +106,6 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
 
   // 3. Determine text colours based on template overlay scheme
   const scheme = opts.template.overlayScheme
-  const textColor    = scheme === 'light' ? '#FFFFFF' : '#1A1D2E'
-  const subTextColor = scheme === 'light' ? 'rgba(255,255,255,0.90)' : 'rgba(26,29,46,0.80)'
   const shadowColor  = scheme === 'light' ? 'rgba(0,0,0,0.60)' : 'rgba(0,0,0,0.15)'
 
   // For panels with white/light background, always use dark text
