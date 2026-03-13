@@ -309,15 +309,13 @@ function renderCalendarToCanvas(params: {
 
     // Observances for this day
     const dayObs = obsMap.get(dayNum) ?? []
-    const regularFont = `${obsFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
     const emojiFont = `${obsFontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
     for (const obs of dayObs) {
       if (contentY + lineH > cellY + cellH - 4) break
       const label = obs.emoji ? `${obs.emoji} ${obs.name}` : obs.name
-      // Measure with regular font (accurate for text), render with emoji font
-      ctx.font = regularFont
-      const lines = canvasWrapText(ctx, label, contentMaxW)
+      // Always measure with emoji font so emoji width is accounted for correctly
       ctx.font = emojiFont
+      const lines = canvasWrapText(ctx, label, contentMaxW)
       ctx.fillStyle = OBS_COLOR
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
