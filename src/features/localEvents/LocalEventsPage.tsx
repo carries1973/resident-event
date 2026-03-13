@@ -418,7 +418,7 @@ export function LocalEventsPage() {
         {building && (
           <p className="text-xs text-text-muted flex items-center gap-1">
             <MapPin className="h-3 w-3 shrink-0" />
-            Discovering events in <span className="font-medium text-text-secondary ml-0.5">{building.city}, {building.province}</span>
+            Discovering events in <span className="font-medium text-text-secondary ml-0.5">{building.city.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}, {building.province}</span>
           </p>
         )}
 
@@ -458,7 +458,7 @@ export function LocalEventsPage() {
       {/* Generating skeleton */}
       {pageState === 'generating' && (
         <div className="space-y-2">
-          <p className="text-sm text-text-muted italic">Finding community events in {building?.city}…</p>
+          <p className="text-sm text-text-muted italic">Finding community events in {building?.city.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}…</p>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-14 rounded-xl border border-border-default bg-surface animate-pulse" />
           ))}

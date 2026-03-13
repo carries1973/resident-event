@@ -11,9 +11,11 @@ import {
   UserCog,
   MessageSquare,
   MapPin,
+  Share2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/lib/store/appStore'
+import { toast } from 'sonner'
 
 interface NavItem {
   label: string
@@ -62,6 +64,21 @@ const NAV_GROUPS: NavGroup[] = [
 
 export function Sidebar() {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+
+  function handleShare() {
+    const url = window.location.origin
+    if (navigator.share) {
+      navigator.share({
+        title: 'Resident Event Planner',
+        text: 'A free AI-powered event planning tool for property managers — by Property Consulting Group.',
+        url,
+      }).catch(() => {})
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        toast.success('Link copied to clipboard!')
+      })
+    }
+  }
 
   return (
     <aside
@@ -117,6 +134,29 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* PCG Attribution + Share */}
+      {sidebarOpen && (
+        <div className="px-4 py-3 border-t border-white/10 space-y-2">
+          <a
+            href="https://propertyconsultinggroup.ca"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-[10px] text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors leading-relaxed"
+          >
+            A free tool by
+            <span className="block font-semibold text-sidebar-foreground/60">Property Consulting Group</span>
+            Multifamily Retention Consulting
+          </a>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 text-[10px] text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors"
+          >
+            <Share2 className="h-3 w-3" />
+            Share this tool
+          </button>
+        </div>
+      )}
 
       {/* Footer — collapse button on desktop */}
       <div className="border-t border-white/10 p-2">

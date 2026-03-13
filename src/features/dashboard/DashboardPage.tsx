@@ -290,6 +290,23 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* PCG Consulting CTA */}
+      <div className="rounded-xl border border-brand/20 bg-brand-light px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-brand">Ready to build a full resident retention program?</p>
+          <p className="text-xs text-text-secondary mt-0.5">Property Consulting Group helps multifamily teams reduce turnover through strategic resident experience consulting.</p>
+        </div>
+        <a
+          href="https://propertyconsultinggroup.ca/contact/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white hover:bg-brand-hover transition-colors"
+        >
+          Book a Briefing
+          <ArrowRight className="h-3 w-3" />
+        </a>
+      </div>
     </div>
   )
 }

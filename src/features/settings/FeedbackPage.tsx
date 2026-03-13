@@ -133,6 +133,26 @@ export function FeedbackPage() {
           Formspree <ExternalLink className="h-3 w-3" />
         </a>
       </p>
+      <p className="text-xs text-text-muted pt-4 border-t border-border">
+        Built by{' '}
+        <a
+          href="https://propertyconsultinggroup.ca/resident-experience/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-brand hover:underline"
+        >
+          Property Consulting Group
+        </a>
+        . We help multifamily teams reduce turnover through resident experience consulting.{' '}
+        <a
+          href="https://propertyconsultinggroup.ca/resident-experience/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-text-secondary"
+        >
+          Learn more
+        </a>
+      </p>
     </div>
   )
 }

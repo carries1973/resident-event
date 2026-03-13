@@ -79,6 +79,30 @@ export function AppLayout() {
         <main className="p-4 md:p-6 pb-20 lg:pb-6">
           <Outlet />
         </main>
+
+        {/* PCG persistent footer bar */}
+        <footer className="hidden lg:flex items-center justify-between px-6 py-2 border-t border-border bg-surface text-xs text-text-muted">
+          <span>
+            A free tool by{' '}
+            <a
+              href="https://propertyconsultinggroup.ca/resident-experience/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-brand hover:underline"
+            >
+              Property Consulting Group
+            </a>
+            {' '}— Multifamily Retention Consulting
+          </span>
+          <a
+            href="https://propertyconsultinggroup.ca/contact/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-brand hover:underline"
+          >
+            Need help building a full retention program? Book a briefing
+          </a>
+        </footer>
       </div>
 
       {/* Mobile bottom navigation */}
