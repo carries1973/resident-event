@@ -193,9 +193,6 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
     // CTA pill
     drawCtaPill(ctx, displayCTA, POSTER_W / 2, 1060, brandColor)
 
-    // QR placeholder
-    drawQrPlaceholder(ctx, 878, 1180, 140)
-
     // Building name footer
     ctx.save()
     ctx.font = '400 30px DM Sans, Inter, system-ui, sans-serif'
@@ -395,9 +392,6 @@ export function EventPosterTab({ event }: EventPosterTabProps) {
               >
                 {displayCTA}
               </span>
-              <div className="w-12 h-12 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                <span className="text-[8px] text-gray-400">QR</span>
-              </div>
               <p className="text-[10px] text-gray-400">{buildingName}</p>
             </div>
           </div>
@@ -541,40 +535,4 @@ function drawCtaPill(
   ctx.restore()
 }
 
-function drawQrPlaceholder(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-) {
-  ctx.save()
-  ctx.fillStyle = 'rgba(255,255,255,0.92)'
-  roundRect(ctx, x, y, size, size, 12)
-  ctx.fill()
 
-  ctx.fillStyle = '#1a1d2e'
-  const cell = (size - 20) / 7
-  const grid = [
-    [1,1,1,1,1,1,0],
-    [1,0,0,0,0,1,0],
-    [1,0,1,0,0,1,1],
-    [1,0,0,0,1,1,0],
-    [1,0,1,1,0,1,0],
-    [1,0,0,0,0,1,0],
-    [1,1,1,1,1,1,1],
-  ]
-  for (let row = 0; row < 7; row++) {
-    for (let col = 0; col < 7; col++) {
-      if (grid[row][col]) {
-        ctx.fillRect(x + 10 + col * cell, y + 10 + row * cell, cell - 1, cell - 1)
-      }
-    }
-  }
-
-  ctx.fillStyle = 'rgba(26,29,46,0.5)'
-  ctx.font = '18px DM Sans, system-ui, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'top'
-  ctx.fillText('RSVP', x + size / 2, y + size + 6)
-  ctx.restore()
-}

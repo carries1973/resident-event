@@ -85,20 +85,6 @@ function formatDateShort(dateStr: string, year: number): string {
 }
 
 /**
- * Truncate text with ellipsis if it exceeds maxWidth at the given font size.
- */
-function truncateText(doc: jsPDF, text: string, maxWidth: number): string {
-  const textWidth = doc.getTextWidth(text)
-  if (textWidth <= maxWidth) return text
-  const ellipsis = '...'
-  let truncated = text
-  while (truncated.length > 0 && doc.getTextWidth(truncated + ellipsis) > maxWidth) {
-    truncated = truncated.slice(0, -1)
-  }
-  return truncated + ellipsis
-}
-
-/**
  * Truncate canvas text to fit within maxWidth pixels.
  */
 function canvasTruncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
@@ -400,7 +386,6 @@ function renderLegendToCanvas(params: {
   canvas.height = canvasHeight
   const ctx = canvas.getContext('2d')!
 
-  const brandRgb = hexToRgb(brandColor)
   const brandHex = brandColor
 
   // Background

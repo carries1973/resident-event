@@ -154,7 +154,7 @@ export function PosterTemplatesPage() {
         buildingName: building.name,
         brandColor:  building.brandColor,
         logoDataUrl: building.logoUrl,
-        showQrPlaceholder: true,
+        showQrPlaceholder: false,
       })
 
       setResult(compositor)
@@ -609,10 +609,7 @@ function ComposeStep({
                   <span className="text-text-muted text-xs italic">None uploaded</span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-text-muted w-24 shrink-0">QR code</span>
-                <span className="text-text-secondary text-xs">Placeholder (RSVP link)</span>
-              </div>
+
             </div>
           </div>
         )}

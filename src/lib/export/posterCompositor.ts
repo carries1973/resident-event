@@ -169,10 +169,10 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
   // 9. CTA pill — always uses brand colour
   drawCtaPill(ctx, opts.cta, zones.cta, opts.brandColor, scaledFont.cta.size)
 
-  // 10. QR code placeholder
-  if (opts.showQrPlaceholder !== false) {
-    drawQrPlaceholder(ctx, zones.qr, opts.brandColor, scheme)
-  }
+  // 10. QR code placeholder — disabled (no QR needed)
+  // if (opts.showQrPlaceholder !== false) {
+  //   drawQrPlaceholder(ctx, zones.qr, opts.brandColor, scheme)
+  // }
 
   // 11. Building name footer
   drawWrappedText(ctx, opts.buildingName, zones.buildingName, {
@@ -495,64 +495,6 @@ function drawCtaPill(
   ctx.restore()
 }
 
-function drawQrPlaceholder(
-  ctx: CanvasRenderingContext2D,
-  zone: PosterTemplateZone,
-  _brandColor: string,
-  scheme: 'light' | 'dark',
-): void {
-  const size = Math.min(zone.maxWidth ?? 130, zone.maxHeight ?? 130)
-  const x    = zone.x
-  const y    = zone.y
-
-  ctx.save()
-
-  // Background
-  const bg = 'rgba(255,255,255,0.95)'
-  ctx.fillStyle = bg
-  ctx.shadowColor   = 'rgba(0,0,0,0.15)'
-  ctx.shadowBlur    = 8
-  ctx.shadowOffsetY = 2
-  ctx.beginPath()
-  roundRect(ctx, x, y, size, size, 10)
-  ctx.fill()
-  ctx.shadowColor = 'transparent'
-
-  // QR grid pattern (7×7 simplified representation)
-  const fg = '#1A1D2E'
-  ctx.fillStyle = fg
-  const cell  = (size - 20) / 7
-  const grid  = [
-    [1,1,1,1,1,1,0],
-    [1,0,0,0,0,1,0],
-    [1,0,1,0,0,1,1],
-    [1,0,0,0,1,1,0],
-    [1,0,1,1,0,1,0],
-    [1,0,0,0,0,1,0],
-    [1,1,1,1,1,1,1],
-  ]
-  for (let row = 0; row < 7; row++) {
-    for (let col = 0; col < 7; col++) {
-      if (grid[row][col]) {
-        ctx.fillRect(
-          x + 10 + col * cell,
-          y + 10 + row * cell,
-          cell - 1,
-          cell - 1,
-        )
-      }
-    }
-  }
-
-  // "RSVP" label below QR
-  ctx.fillStyle = scheme === 'light' ? 'rgba(255,255,255,0.80)' : 'rgba(26,29,46,0.60)'
-  ctx.font = '18px "DM Sans", system-ui, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'top'
-  ctx.fillText('RSVP', x + size / 2, y + size + 6)
-
-  ctx.restore()
-}
 
 async function drawLogo(
   ctx: CanvasRenderingContext2D,
