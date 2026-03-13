@@ -200,7 +200,7 @@ export function EventPromoKitTab({ event }: EventPromoKitTabProps) {
     setIsGenerating(true)
     try {
       const { system, user } = buildMarketingPrompt(event, building)
-      const result = await generateAI({ systemPrompt: system, userMessage: user, maxTokens: 1800 })
+      const result = await generateAI({ systemPrompt: system, userMessage: user, maxTokens: 3500 })
       const parsed = parseAiResponse<AiMarketingOutput>(result.text, aiMarketingSchema)
       if (!parsed.success) { toast.error('Generation failed.'); return }
       const m = parsed.data as EventMarketing

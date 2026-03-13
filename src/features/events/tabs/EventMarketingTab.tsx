@@ -60,7 +60,7 @@ export function EventMarketingTab({ event, onGoToPoster }: EventMarketingTabProp
       const result = await generateAI({
         systemPrompt: system,
         userMessage: user,
-        maxTokens: 1800,
+        maxTokens: 3500,
       })
 
       const parsed = parseAiResponse<AiMarketingOutput>(
@@ -107,7 +107,7 @@ export function EventMarketingTab({ event, onGoToPoster }: EventMarketingTabProp
         const result = await generateAI({
           systemPrompt: system,
           userMessage: augmentedUser,
-          maxTokens: 1800,
+          maxTokens: 3500,
         })
 
         const parsed = parseAiResponse<AiMarketingOutput>(
