@@ -308,20 +308,34 @@ function renderCalendarToCanvas(params: {
     let contentY = dayNumY + dayNumFontSize + 4
 
     // Observances for this day
+    // Draw emoji and text separately to avoid unreliable emoji font measurement
     const dayObs = obsMap.get(dayNum) ?? []
-    const emojiFont = `${obsFontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+    const emojiFont = `${obsFontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`
+    const textFont = `${obsFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+    // Emoji are rendered as square at obsFontSize px; add a small gap
+    const emojiBoxW = obsFontSize + 3
     for (const obs of dayObs) {
       if (contentY + lineH > cellY + cellH - 4) break
-      const label = obs.emoji ? `${obs.emoji} ${obs.name}` : obs.name
-      // Always measure with emoji font so emoji width is accounted for correctly
-      ctx.font = emojiFont
-      const lines = canvasWrapText(ctx, label, contentMaxW)
+      const hasEmoji = Boolean(obs.emoji)
+      const firstLineTextX = contentX + (hasEmoji ? emojiBoxW : 0)
+      const firstLineMaxW = contentMaxW - (hasEmoji ? emojiBoxW : 0)
+      // Measure and wrap only the text portion using regular font
+      ctx.font = textFont
+      const lines = canvasWrapText(ctx, obs.name, firstLineMaxW)
       ctx.fillStyle = OBS_COLOR
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
-      for (const line of lines) {
+      // Draw emoji on first line only
+      if (hasEmoji) {
+        ctx.font = emojiFont
+        ctx.fillText(obs.emoji!, contentX, contentY)
+      }
+      // Draw text lines: first line indented after emoji, subsequent lines full width
+      ctx.font = textFont
+      for (let li = 0; li < lines.length; li++) {
         if (contentY + lineH > cellY + cellH - 4) break
-        ctx.fillText(line, contentX, contentY)
+        const lineX = li === 0 ? firstLineTextX : contentX
+        ctx.fillText(lines[li], lineX, contentY)
         contentY += lineH
       }
     }
