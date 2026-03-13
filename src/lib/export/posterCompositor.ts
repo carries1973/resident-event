@@ -43,7 +43,7 @@ export type CropKey = keyof typeof CROPS
 // ── Font sizes (at 1080px canvas width) ──────────────────────────
 const FONT = {
   eventName:    { size: 92, weight: '800', family: '"DM Sans", "Inter", system-ui, sans-serif' },
-  dateTime:     { size: 44, weight: '600', family: '"DM Sans", "Inter", system-ui, sans-serif' },
+  dateTime:     { size: 38, weight: '600', family: '"DM Sans", "Inter", system-ui, sans-serif' },
   location:     { size: 36, weight: '400', family: '"DM Sans", "Inter", system-ui, sans-serif' },
   cta:          { size: 50, weight: '700', family: '"DM Sans", "Inter", system-ui, sans-serif' },
   buildingName: { size: 28, weight: '400', family: '"DM Sans", "Inter", system-ui, sans-serif' },
