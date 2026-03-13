@@ -58,6 +58,25 @@ const MONTH_NAMES = [
 const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 /**
+ * Strip emoji and non-ASCII characters that jsPDF's built-in fonts cannot render.
+ * jsPDF uses Helvetica/Times/Courier which have no emoji glyphs — passing emoji
+ * characters results in blank boxes or rendering errors in the PDF output.
+ * This function removes emoji and replaces them with nothing (the name is
+ * descriptive enough without the emoji decoration).
+ */
+function stripEmoji(text: string): string {
+  // Remove emoji and other non-BMP characters (surrogate pairs)
+  // Also remove variation selectors and zero-width joiners used in emoji sequences
+  return text
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // Emoji and symbols (SMP plane)
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')    // Misc symbols, dingbats
+    .replace(/[\u{FE00}-\u{FE0F}]/gu, '')    // Variation selectors
+    .replace(/\u200D/g, '')                   // Zero-width joiner
+    .replace(/\s{2,}/g, ' ')                  // Collapse double spaces from removal
+    .trim()
+}
+
+/**
  * Parse a hex colour string into RGB components.
  * Accepts "#RRGGBB" or "RRGGBB" format.
  */
@@ -305,23 +324,13 @@ export async function exportCalendarPDF(
 
           const maxObs = 2 // never crowd the cell
           const displayObs = dayObservances.slice(0, maxObs)
-          const emojiWidth = 0.14  // approximate width of one emoji character at 8.5pt
-          const emojiGap = 0.03   // gap between emoji and text
           for (const obs of displayObs) {
-            if (obs.emoji) {
-              // Render the observance emoji — clean, colourful, instantly recognisable
-              doc.setFont('helvetica', 'normal')
-              doc.setFontSize(8.5)
-              doc.text(obs.emoji, x + 0.05, contentY)
-              const obsText = truncateText(doc, obs.name, maxTextWidth - emojiWidth - emojiGap)
-              doc.setTextColor(0x77, 0x77, 0x77)
-              doc.text(obsText, x + 0.05 + emojiWidth + emojiGap, contentY)
-            } else {
-              // Fallback: no emoji — just render the name
-              const obsText = truncateText(doc, obs.name, maxTextWidth)
-              doc.setTextColor(0x77, 0x77, 0x77)
-              doc.text(obsText, x + 0.05, contentY)
-            }
+            // Strip emoji before passing to jsPDF — Helvetica has no emoji glyphs.
+            // The observance name alone is descriptive enough in the compact grid cell.
+            const safeObsName = stripEmoji(obs.name)
+            const obsText = truncateText(doc, safeObsName, maxTextWidth)
+            doc.setTextColor(0x77, 0x77, 0x77)
+            doc.text(obsText, x + 0.05, contentY)
             contentY += lineH
           }
           if (dayObservances.length > maxObs) {
@@ -454,8 +463,8 @@ export async function exportCalendarPDF(
         doc.text(dateLabel, leftColX, leftY)
         doc.setTextColor(0x22, 0x22, 0x22)
         doc.setFont('helvetica', 'normal')
-        // Prepend emoji if available for a polished legend
-        const obsDisplayName = obs.emoji ? `${obs.emoji}  ${obs.name}` : obs.name
+        // Strip emoji — jsPDF Helvetica cannot render emoji glyphs
+        const obsDisplayName = stripEmoji(obs.name)
         const obsName = truncateText(doc, obsDisplayName, legendColWidth - dateLabelWidth)
         doc.text(obsName, leftColX + dateLabelWidth, leftY)
 
