@@ -312,8 +312,8 @@ function renderCalendarToCanvas(params: {
     const dayObs = obsMap.get(dayNum) ?? []
     const emojiFont = `${obsFontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`
     const textFont = `${obsFontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
-    // Emoji are rendered as square at obsFontSize px; add a small gap
-    const emojiBoxW = obsFontSize + 3
+    // Emoji are rendered as square at obsFontSize px; add a comfortable gap after
+    const emojiBoxW = obsFontSize + 5
     for (const obs of dayObs) {
       if (contentY + lineH > cellY + cellH - 4) break
       const hasEmoji = Boolean(obs.emoji)
