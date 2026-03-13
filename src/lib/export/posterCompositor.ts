@@ -108,6 +108,16 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
   const scheme = opts.template.overlayScheme
   const shadowColor  = scheme === 'light' ? 'rgba(0,0,0,0.60)' : 'rgba(0,0,0,0.15)'
 
+  // Apply font scale for templates with compact text zones (e.g., BBQ bottom strip)
+  const fontScale = opts.template.fontScale ?? 1.0
+  const scaledFont = {
+    eventName:    { ...FONT.eventName,    size: Math.round(FONT.eventName.size    * fontScale) },
+    dateTime:     { ...FONT.dateTime,     size: Math.round(FONT.dateTime.size     * fontScale) },
+    location:     { ...FONT.location,     size: Math.round(FONT.location.size     * fontScale) },
+    cta:          { ...FONT.cta,          size: Math.round(FONT.cta.size          * fontScale) },
+    buildingName: { ...FONT.buildingName, size: Math.round(FONT.buildingName.size * fontScale) },
+  }
+
   // For panels with white/light background, always use dark text
   const panelStyle = panel?.style
   const usesDarkText = panelStyle === 'white' || panelStyle === 'transparent-light' || scheme === 'dark'
@@ -124,15 +134,15 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
 
   // 5. Event name — large hero text
   drawWrappedText(ctx, opts.eventName, zones.eventName, {
-    ...FONT.eventName,
+    ...scaledFont.eventName,
     color: finalTextColor,
     lineHeight: 1.12,
     shadowColor: finalShadow,
   })
 
   // 6. Accent divider line below event name
-  const nameLines = estimateLineCount(ctx, opts.eventName, zones.eventName.maxWidth, FONT.eventName.size)
-  const dividerY = zones.eventName.y + nameLines * FONT.eventName.size * 1.12 + 24
+  const nameLines = estimateLineCount(ctx, opts.eventName, zones.eventName.maxWidth, scaledFont.eventName.size)
+  const dividerY = zones.eventName.y + nameLines * scaledFont.eventName.size * 1.12 + 24
   if (dividerY < zones.dateTime.y - 20) {
     drawAccentDivider(ctx, dividerY, opts.brandColor, usesDarkText)
   }
@@ -140,7 +150,7 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
   // 7. Date/time
   if (opts.dateTime) {
     drawWrappedText(ctx, opts.dateTime, zones.dateTime, {
-      ...FONT.dateTime,
+      ...scaledFont.dateTime,
       color: finalSubTextColor,
       shadowColor: finalShadow,
     })
@@ -150,14 +160,14 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
   if (opts.location) {
     const locationText = `📍 ${opts.location}`
     drawWrappedText(ctx, locationText, zones.location, {
-      ...FONT.location,
+      ...scaledFont.location,
       color: finalSubTextColor,
       shadowColor: finalShadow,
     })
   }
 
   // 9. CTA pill — always uses brand colour
-  drawCtaPill(ctx, opts.cta, zones.cta, opts.brandColor)
+  drawCtaPill(ctx, opts.cta, zones.cta, opts.brandColor, scaledFont.cta.size)
 
   // 10. QR code placeholder
   if (opts.showQrPlaceholder !== false) {
@@ -166,7 +176,7 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
 
   // 11. Building name footer
   drawWrappedText(ctx, opts.buildingName, zones.buildingName, {
-    ...FONT.buildingName,
+    ...scaledFont.buildingName,
     color: finalSubTextColor,
     shadowColor: finalShadow,
   })
@@ -444,12 +454,13 @@ function drawCtaPill(
   text: string,
   zone: PosterTemplateZone,
   brandColor: string,
+  fontSize: number = FONT.cta.size,
 ): void {
   if (!text) return
 
   ctx.save()
 
-  const fontSize = FONT.cta.size
+  // fontSize is passed in from caller (supports fontScale)
   ctx.font = `${FONT.cta.weight} ${fontSize}px ${FONT.cta.family}`
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'center'

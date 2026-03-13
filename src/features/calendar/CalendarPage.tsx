@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, SlidersHorizontal, ArrowRight } from 'lucide-react'
 import { useAppStore } from '@/lib/store/appStore'
@@ -35,6 +35,9 @@ export function CalendarPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
+
+  /** Ref to the calendar grid wrapper — used by CalendarExport for html2canvas capture */
+  const calendarGridRef = useRef<HTMLDivElement>(null)
 
   // Sync URL ?month=YYYY-MM param → store on mount and when param changes
   useEffect(() => {
@@ -209,7 +212,7 @@ export function CalendarPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <CalendarExport year={year} month={month} />
+          <CalendarExport year={year} month={month} calendarRef={calendarGridRef} />
           <Button
             variant="outline"
             size="sm"
@@ -282,8 +285,8 @@ export function CalendarPage() {
           </aside>
         )}
 
-        {/* Calendar Grid */}
-        <div className="flex-1 min-w-0">
+        {/* Calendar Grid — ref used for PDF export capture */}
+        <div ref={calendarGridRef} className="flex-1 min-w-0">
           <CalendarGrid onDayClick={handleDayClick} />
         </div>
       </div>

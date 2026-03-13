@@ -1,19 +1,17 @@
 /**
  * Calendar PDF Export
  *
- * Generates a building-branded monthly calendar as a landscape-oriented
- * PDF using jsPDF. All layout values are governed by the locked export
- * contract enforced through gatekeeper assertions.
+ * Generates a building-branded monthly calendar PDF by capturing the live
+ * calendar grid DOM element with html2canvas (preserving emojis, fonts, and
+ * all styling exactly as seen on screen), then embedding that image into a
+ * landscape letter PDF with a branded header and a legend page.
  *
- * The exported PDF uses the building's brand colour for the month header
- * and includes the building logo (if provided). No app branding appears
- * anywhere in the output.
- *
- * Page 1: Calendar grid with events (max 2 per cell) and observance names.
- * Page 2 (legend): All observances with dates + all events with date/time/location.
+ * Page 1: Branded header + calendar grid screenshot (with emojis)
+ * Page 2 (legend): All observances with dates + all events with date/time/location
  */
 
 import { jsPDF } from 'jspdf'
+import html2canvas from 'html2canvas'
 import { assertExportConfig, getDefaultExportConfig } from './gatekeeper'
 
 export interface CalendarExportParams {
@@ -34,51 +32,20 @@ export interface CalendarExportParams {
     emoji?: string
   }>
   buildingName: string
-  brandColor: string // hex, e.g. "#2E8B8B"
+  brandColor: string // hex, e.g. "#8F1D23"
   logoUrl?: string // data URL or undefined
+  /** The live calendar grid DOM element to capture with html2canvas */
+  calendarElement?: HTMLElement | null
 }
 
 /** Month names for header display */
 const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ]
-
-/** Day-of-week headers (Sunday-first) */
-const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-/**
- * Strip emoji and non-ASCII characters that jsPDF's built-in fonts cannot render.
- * jsPDF uses Helvetica/Times/Courier which have no emoji glyphs — passing emoji
- * characters results in blank boxes or rendering errors in the PDF output.
- * This function removes emoji and replaces them with nothing (the name is
- * descriptive enough without the emoji decoration).
- */
-function stripEmoji(text: string): string {
-  // Remove emoji and other non-BMP characters (surrogate pairs)
-  // Also remove variation selectors and zero-width joiners used in emoji sequences
-  return text
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '') // Emoji and symbols (SMP plane)
-    .replace(/[\u{2600}-\u{27BF}]/gu, '')    // Misc symbols, dingbats
-    .replace(/[\u{FE00}-\u{FE0F}]/gu, '')    // Variation selectors
-    .replace(/\u200D/g, '')                   // Zero-width joiner
-    .replace(/\s{2,}/g, ' ')                  // Collapse double spaces from removal
-    .trim()
-}
 
 /**
  * Parse a hex colour string into RGB components.
- * Accepts "#RRGGBB" or "RRGGBB" format.
  */
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const clean = hex.replace('#', '')
@@ -87,36 +54,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
     g: parseInt(clean.substring(2, 4), 16),
     b: parseInt(clean.substring(4, 6), 16),
   }
-}
-
-/**
- * Get the number of rows needed for a calendar month grid.
- * A month needs 5 or 6 rows depending on the starting day and total days.
- */
-function getCalendarRows(year: number, month: number): number {
-  const firstDay = new Date(year, month - 1, 1).getDay() // 0 = Sunday
-  const daysInMonth = new Date(year, month, 0).getDate()
-  const totalCells = firstDay + daysInMonth
-  return Math.ceil(totalCells / 7)
-}
-
-/**
- * Truncate text with ellipsis if it exceeds maxWidth at the given font size.
- */
-function truncateText(
-  doc: jsPDF,
-  text: string,
-  maxWidth: number,
-): string {
-  const textWidth = doc.getTextWidth(text)
-  if (textWidth <= maxWidth) return text
-
-  const ellipsis = '...'
-  let truncated = text
-  while (truncated.length > 0 && doc.getTextWidth(truncated + ellipsis) > maxWidth) {
-    truncated = truncated.slice(0, -1)
-  }
-  return truncated + ellipsis
 }
 
 /**
@@ -138,14 +75,26 @@ function formatDateShort(dateStr: string, year: number): string {
   const monthName = MONTH_NAMES[date.getMonth()]
   const day = date.getDate()
   const dateYear = date.getFullYear()
-  // Only append year if it differs from the calendar year
   if (dateYear !== year) return `${monthName} ${day}, ${dateYear}`
   return `${monthName} ${day}`
 }
 
 /**
+ * Truncate text with ellipsis if it exceeds maxWidth at the given font size.
+ */
+function truncateText(doc: jsPDF, text: string, maxWidth: number): string {
+  const textWidth = doc.getTextWidth(text)
+  if (textWidth <= maxWidth) return text
+  const ellipsis = '...'
+  let truncated = text
+  while (truncated.length > 0 && doc.getTextWidth(truncated + ellipsis) > maxWidth) {
+    truncated = truncated.slice(0, -1)
+  }
+  return truncated + ellipsis
+}
+
+/**
  * Draw the branded page header (logo + month/year title).
- * Returns the x-position where the month text starts (after logo if present).
  */
 async function drawPageHeader(
   doc: jsPDF,
@@ -163,17 +112,14 @@ async function drawPageHeader(
 
   if (logoUrl) {
     try {
-      // Auto-detect the image format from the data URL prefix so JPEG logos
-      // don't cause a format mismatch error in jsPDF.
       const logoFormat = logoUrl.startsWith('data:image/jpeg') ? 'JPEG'
         : logoUrl.startsWith('data:image/png') ? 'PNG'
-        : 'JPEG' // safe fallback for any other format
+        : 'JPEG'
       const logoMaxHeight = 0.5
       const logoMaxWidth = 0.8
       doc.addImage(logoUrl, logoFormat, margin, margin, logoMaxWidth, logoMaxHeight)
       headerTextX = margin + logoMaxWidth + 0.15
     } catch {
-      // Logo failed to render — continue without it rather than aborting export
       headerTextX = margin
     }
   }
@@ -187,40 +133,30 @@ async function drawPageHeader(
 /**
  * Export a monthly calendar as a PDF file.
  *
- * This function:
- * 1. Validates the locked export config via gatekeeper assertions
- * 2. Builds a landscape letter-size PDF (11" x 8.5")
- * 3. Draws a branded header with optional logo and month/year
- * 4. Renders day-of-week headers
- * 5. Draws the calendar grid with events (max 2 per cell) and observance names
- * 6. Adds a legend page listing all observances and all events with details
- * 7. Saves the PDF with a building-branded filename
+ * Uses html2canvas to capture the live calendar grid (preserving emojis and
+ * all styling), then embeds it into a landscape letter PDF with a branded
+ * header. A legend page lists all observances and events with full details.
  */
 export async function exportCalendarPDF(
   params: CalendarExportParams,
 ): Promise<void> {
-  const { year, month, events, observances = [], buildingName, brandColor, logoUrl } = params
+  const { year, month, events, observances = [], buildingName, brandColor, logoUrl, calendarElement } = params
   const config = getDefaultExportConfig()
 
   // ── Gatekeeper check ──────────────────────────────────────────────
   assertExportConfig(config)
 
   // ── Page setup ────────────────────────────────────────────────────
-  // Letter landscape: 11" wide x 8.5" tall, using inches as units
   const doc = new jsPDF('landscape', 'in', 'letter')
-
   const pageWidth = 11
   const pageHeight = 8.5
-  const margin = config.marginInches // 0.5"
-  const printableWidth = pageWidth - margin * 2 // 10"
-  const printableHeight = pageHeight - margin * 2 // 7.5"
-
+  const margin = config.marginInches
+  const printableWidth = pageWidth - margin * 2
   const brandRgb = hexToRgb(brandColor)
   const monthName = MONTH_NAMES[month - 1]
+  const headerHeight = 0.65
 
-  // ── Header area ───────────────────────────────────────────────────
-  const headerHeight = 0.6 // Reserve 0.6" for header
-
+  // ── Draw header ───────────────────────────────────────────────────
   await drawPageHeader(doc, {
     logoUrl,
     monthName,
@@ -230,151 +166,57 @@ export async function exportCalendarPDF(
     monthHeaderFontSize: config.fontSize.monthHeader,
   })
 
-  // ── Day-of-week headers ───────────────────────────────────────────
-  const gridTop = margin + headerHeight + 0.1
-  const colWidth = printableWidth / 7
-  const headerRowHeight = 0.3
-
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(config.fontSize.dayOfWeek) // 12pt
-  doc.setTextColor(0x33, 0x33, 0x33) // #333333
-
-  for (let col = 0; col < 7; col++) {
-    const x = margin + col * colWidth
-    const textWidth = doc.getTextWidth(DAY_HEADERS[col])
-    doc.text(DAY_HEADERS[col], x + (colWidth - textWidth) / 2, gridTop + 0.2)
-  }
-
-  // ── Calendar grid ─────────────────────────────────────────────────
-  const numRows = getCalendarRows(year, month)
-  const gridContentTop = gridTop + headerRowHeight
-  const availableGridHeight = printableHeight - headerHeight - 0.1 - headerRowHeight
-  const cellHeight = Math.max(config.cellHeightInches, availableGridHeight / numRows)
-
-  const firstDayOfWeek = new Date(year, month - 1, 1).getDay()
-  const daysInMonth = new Date(year, month, 0).getDate()
-
-  // Group events by day number for quick lookup
-  const eventsByDay = new Map<
-    number,
-    Array<{ name: string; status: string; startTime?: string; endTime?: string; location?: string }>
-  >()
-  for (const event of events) {
-    const eventDate = new Date(event.date + 'T00:00:00')
-    if (eventDate.getFullYear() === year && eventDate.getMonth() + 1 === month) {
-      const day = eventDate.getDate()
-      if (!eventsByDay.has(day)) {
-        eventsByDay.set(day, [])
-      }
-      eventsByDay.get(day)!.push({
-        name: event.name,
-        status: event.status,
-        startTime: event.startTime,
-        endTime: event.endTime,
-        location: event.location,
+  // ── Capture calendar grid with html2canvas ────────────────────────
+  if (calendarElement) {
+    try {
+      // Capture the calendar grid at 2x scale for crisp rendering
+      const canvas = await html2canvas(calendarElement, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        // Ensure emoji fonts are loaded
+        onclone: (clonedDoc) => {
+          // Apply explicit emoji font stack to all elements in the clone
+          const style = clonedDoc.createElement('style')
+          style.textContent = `
+            * {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            }
+            [aria-hidden="true"], .emoji {
+              font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif !important;
+            }
+          `
+          clonedDoc.head.appendChild(style)
+        },
       })
+
+      const imgData = canvas.toDataURL('image/png')
+      const gridTop = margin + headerHeight
+      const gridHeight = pageHeight - margin - gridTop
+
+      // Embed the captured calendar image
+      doc.addImage(imgData, 'PNG', margin, gridTop, printableWidth, gridHeight)
+    } catch (err) {
+      console.error('[CalendarPDF] html2canvas capture failed:', err)
+      // Fallback: just show a message in the PDF
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(0x88, 0x88, 0x88)
+      doc.text('Calendar grid could not be captured.', margin, margin + headerHeight + 0.5)
     }
-  }
-
-  // Group observances by day for quick lookup
-  // day === undefined means month-long — we skip those in the grid (too many cells)
-  const observancesByDay = new Map<number, Array<{ name: string; emoji?: string }>>()
-  for (const obs of observances) {
-    if (obs.day != null && obs.month === month) {
-      if (!observancesByDay.has(obs.day)) {
-        observancesByDay.set(obs.day, [])
-      }
-      observancesByDay.get(obs.day)!.push({ name: obs.name, emoji: obs.emoji })
-    }
-  }
-
-  // Draw cell borders and content
-  doc.setDrawColor(0xd0, 0xd0, 0xd0) // #D0D0D0
-  doc.setLineWidth(0.5 / 72) // 0.5pt → inches
-
-  for (let row = 0; row < numRows; row++) {
-    for (let col = 0; col < 7; col++) {
-      const cellIndex = row * 7 + col
-      const dayNum = cellIndex - firstDayOfWeek + 1
-
-      const x = margin + col * colWidth
-      const y = gridContentTop + row * cellHeight
-
-      // Draw cell border
-      doc.rect(x, y, colWidth, cellHeight)
-
-      // Only render content for valid days of the month
-      if (dayNum >= 1 && dayNum <= daysInMonth) {
-        // Day number: 10.5pt bold #333333, top-left of cell
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(config.fontSize.dayNumber) // 10.5pt
-        doc.setTextColor(0x33, 0x33, 0x33)
-        doc.text(String(dayNum), x + 0.05, y + 0.18)
-
-        let contentY = y + 0.32 // cursor below day number
-        const lineH = 0.15 // line height for cell content
-        const maxTextWidth = colWidth - 0.1
-
-        // ── Observances for this day (italic, muted grey, 8.5pt) ─────
-        const dayObservances = observancesByDay.get(dayNum)
-        if (dayObservances && dayObservances.length > 0) {
-          doc.setFont('helvetica', 'italic')
-          doc.setFontSize(8.5) // smaller than event text — visual hierarchy
-          doc.setTextColor(0x77, 0x77, 0x77) // #777777
-
-          const maxObs = 2 // never crowd the cell
-          const displayObs = dayObservances.slice(0, maxObs)
-          for (const obs of displayObs) {
-            // Strip emoji before passing to jsPDF — Helvetica has no emoji glyphs.
-            // The observance name alone is descriptive enough in the compact grid cell.
-            const safeObsName = stripEmoji(obs.name)
-            const obsText = truncateText(doc, safeObsName, maxTextWidth)
-            doc.setTextColor(0x77, 0x77, 0x77)
-            doc.text(obsText, x + 0.05, contentY)
-            contentY += lineH
-          }
-          if (dayObservances.length > maxObs) {
-            doc.setFillColor(0x99, 0x99, 0x99)
-            doc.text(`+${dayObservances.length - maxObs} more`, x + 0.05, contentY)
-            contentY += lineH
-          }
-
-          // Add a tiny gap between observances and events
-          contentY += 0.02
-        }
-
-        // ── Events for this day ───────────────────────────────────────
-        const dayEvents = eventsByDay.get(dayNum)
-        if (dayEvents && dayEvents.length > 0) {
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(config.fontSize.eventText) // 9.5pt
-          doc.setTextColor(0x44, 0x44, 0x44) // #444444
-
-          const displayCount = Math.min(dayEvents.length, config.maxEventsPerCell)
-
-          for (let i = 0; i < displayCount; i++) {
-            const eventName = truncateText(doc, dayEvents[i].name, maxTextWidth)
-            doc.text(eventName, x + 0.05, contentY)
-            contentY += lineH
-          }
-
-          // Overflow indicator
-          if (dayEvents.length > config.maxEventsPerCell) {
-            const overflow = dayEvents.length - config.maxEventsPerCell
-            doc.setFont('helvetica', 'italic')
-            doc.setFontSize(config.fontSize.eventText)
-            doc.setTextColor(0x88, 0x88, 0x88) // #888888
-            doc.text(`+${overflow} more`, x + 0.05, contentY)
-          }
-        }
-      }
-    }
+  } else {
+    // No element provided — show placeholder
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(0x88, 0x88, 0x88)
+    doc.text('No calendar element provided for capture.', margin, margin + headerHeight + 0.5)
   }
 
   // ══════════════════════════════════════════════════════════════════
   // ── PAGE 2: Legend ────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════
-  // Only add the legend page if there are observances or events to list.
   const monthObservances = observances.filter((o) => o.month === month)
   const monthEvents = events.filter((e) => {
     const d = new Date(e.date + 'T00:00:00')
@@ -384,7 +226,6 @@ export async function exportCalendarPDF(
   if (monthObservances.length > 0 || monthEvents.length > 0) {
     doc.addPage('letter', 'landscape')
 
-    // ── Legend page header ─────────────────────────────────────────
     await drawPageHeader(doc, {
       logoUrl,
       monthName,
@@ -423,20 +264,17 @@ export async function exportCalendarPDF(
 
     // ── LEFT COLUMN: Observances ───────────────────────────────────
     if (monthObservances.length > 0) {
-      // Section heading
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(sectionTitleSize)
       doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
       doc.text('Observances', leftColX, leftY)
       leftY += sectionGap
 
-      // Thin rule under heading
       doc.setDrawColor(brandRgb.r, brandRgb.g, brandRgb.b)
       doc.setLineWidth(0.5 / 72)
       doc.line(leftColX, leftY, leftColX + legendColWidth, leftY)
       leftY += afterSectionGap + 0.05
 
-      // Sort observances: day-specific first (by day), then month-long
       const sorted = [...monthObservances].sort((a, b) => {
         if (a.day != null && b.day != null) return a.day - b.day
         if (a.day != null) return -1
@@ -445,26 +283,26 @@ export async function exportCalendarPDF(
       })
 
       for (const obs of sorted) {
-        // Date label
         let dateLabel: string
         if (obs.day != null) {
           dateLabel = `${monthName} ${obs.day}`
         } else {
-          dateLabel = `All of ${monthName}` // month-long
+          dateLabel = `All of ${monthName}`
         }
 
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(itemFontSize)
-        doc.setTextColor(0x33, 0x33, 0x33)
-
-        // Date in grey, emoji + name in black
         const dateLabelWidth = doc.getTextWidth(dateLabel + '  ')
+
         doc.setTextColor(0x77, 0x77, 0x77)
         doc.text(dateLabel, leftColX, leftY)
+
         doc.setTextColor(0x22, 0x22, 0x22)
         doc.setFont('helvetica', 'normal')
-        // Strip emoji — jsPDF Helvetica cannot render emoji glyphs
-        const obsDisplayName = stripEmoji(obs.name)
+
+        // Include emoji in the legend — jsPDF will skip what it can't render
+        // but the name alone is fully descriptive
+        const obsDisplayName = obs.emoji ? `${obs.emoji} ${obs.name}` : obs.name
         const obsName = truncateText(doc, obsDisplayName, legendColWidth - dateLabelWidth)
         doc.text(obsName, leftColX + dateLabelWidth, leftY)
 
@@ -474,20 +312,17 @@ export async function exportCalendarPDF(
 
     // ── RIGHT COLUMN: Events ───────────────────────────────────────
     if (monthEvents.length > 0) {
-      // Section heading
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(sectionTitleSize)
       doc.setTextColor(brandRgb.r, brandRgb.g, brandRgb.b)
-      doc.text('Resident Event Planner', rightColX, rightY)
+      doc.text('Resident Events', rightColX, rightY)
       rightY += sectionGap
 
-      // Thin rule under heading
       doc.setDrawColor(brandRgb.r, brandRgb.g, brandRgb.b)
       doc.setLineWidth(0.5 / 72)
       doc.line(rightColX, rightY, rightColX + legendColWidth, rightY)
       rightY += afterSectionGap + 0.05
 
-      // Sort events by date then name
       const sortedEvents = [...monthEvents].sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date)
         const aTime = a.startTime ?? ''
@@ -497,7 +332,6 @@ export async function exportCalendarPDF(
       })
 
       for (const event of sortedEvents) {
-        // Event name (bold)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(itemFontSize)
         doc.setTextColor(0x22, 0x22, 0x22)
@@ -505,7 +339,6 @@ export async function exportCalendarPDF(
         doc.text(eventNameText, rightColX, rightY)
         rightY += itemLineHeight * 0.85
 
-        // Detail line: date + time + location (smaller, grey)
         const datePart = formatDateShort(event.date, year)
         const timePart =
           event.startTime && event.endTime
@@ -523,11 +356,11 @@ export async function exportCalendarPDF(
         doc.setTextColor(0x66, 0x66, 0x66)
         const detailText = truncateText(doc, detailLine, legendColWidth)
         doc.text(detailText, rightColX, rightY)
-        rightY += itemLineHeight + 0.04 // extra gap between events
+        rightY += itemLineHeight + 0.04
       }
     }
 
-      // ── Footer note ──────────────────────────────────────────────
+    // ── Footer ──────────────────────────────────────────────────────
     const footerY = pageHeight - margin * 0.6
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(8)
@@ -538,7 +371,6 @@ export async function exportCalendarPDF(
       footerY,
       { align: 'center' },
     )
-    // PCG watermark — right-aligned on footer
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7)
     doc.setTextColor(0xcc, 0xcc, 0xcc)

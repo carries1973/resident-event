@@ -6,14 +6,15 @@
  * stores, then delegates to the calendarPDF export module.
  *
  * The exported PDF is 2 pages:
- *   1. Calendar grid (events + observance names in cells)
+ *   1. Branded header + html2canvas screenshot of the live calendar grid
+ *      (preserves emojis, colours, and all styling exactly as on screen)
  *   2. Legend (all observances with dates + all events with time/location)
  *
  * Shows toast notifications for loading, success, and error states.
  * Requires a building to be selected (via appStore.currentBuildingId).
  */
 
-import { useState } from 'react'
+import { useState, type RefObject } from 'react'
 import { Download, Printer, ChevronDown, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -38,9 +39,11 @@ import { DEFAULT_OBSERVANCES } from '@/lib/data/observances'
 interface CalendarExportProps {
   year: number
   month: number // 1-12
+  /** Ref to the calendar grid DOM element for html2canvas capture */
+  calendarRef?: RefObject<HTMLDivElement | null>
 }
 
-export function CalendarExport({ year, month }: CalendarExportProps) {
+export function CalendarExport({ year, month, calendarRef }: CalendarExportProps) {
   const [isExporting, setIsExporting] = useState(false)
 
   const currentBuildingId = useAppStore((s) => s.currentBuildingId)
@@ -51,7 +54,6 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
 
   const building = currentBuildingId ? getBuildingById(currentBuildingId) : undefined
   const hasBuildings = buildings.length > 0
-  // Export is disabled if there's no building selected or no buildings at all
   const exportDisabled = !building || isExporting
 
   async function handleExportPDF() {
@@ -80,8 +82,7 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
         )
       })
 
-      // Filter observances for the current month, excluding ones the user has
-      // disabled and excluding themes (internal planning context only)
+      // Filter observances for the current month, excluding disabled and themes
       const monthObservances = DEFAULT_OBSERVANCES.filter((obs) => {
         if (obs.month !== month) return false
         if (obs.type === 'theme') return false
@@ -109,6 +110,8 @@ export function CalendarExport({ year, month }: CalendarExportProps) {
         buildingName: building.name,
         brandColor: building.brandColor || '#3B7BF4',
         logoUrl: building.logoUrl,
+        // Pass the live calendar grid element for html2canvas capture
+        calendarElement: calendarRef?.current ?? null,
       })
 
       toast.success('Calendar PDF downloaded successfully.', { id: toastId })
