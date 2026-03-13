@@ -11,7 +11,7 @@
  */
 
 import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
+import domtoimage from 'dom-to-image-more'
 import { assertExportConfig, getDefaultExportConfig } from './gatekeeper'
 
 export interface CalendarExportParams {
@@ -170,29 +170,16 @@ export async function exportCalendarPDF(
   if (calendarElement) {
     try {
       // Capture the calendar grid at 2x scale for crisp rendering
-      const canvas = await html2canvas(calendarElement, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        // Ensure emoji fonts are loaded
-        onclone: (clonedDoc) => {
-          // Apply explicit emoji font stack to all elements in the clone
-          const style = clonedDoc.createElement('style')
-          style.textContent = `
-            * {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-            }
-            [aria-hidden="true"], .emoji {
-              font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif !important;
-            }
-          `
-          clonedDoc.head.appendChild(style)
+      // dom-to-image-more handles modern CSS (oklch, etc.) correctly
+      const imgData = await domtoimage.toPng(calendarElement, {
+        width: calendarElement.offsetWidth * 2,
+        height: calendarElement.offsetHeight * 2,
+        style: {
+          transform: 'scale(2)',
+          transformOrigin: 'top left',
+          backgroundColor: '#ffffff',
         },
       })
-
-      const imgData = canvas.toDataURL('image/png')
       const gridTop = margin + headerHeight
       const gridHeight = pageHeight - margin - gridTop
 
