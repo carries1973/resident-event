@@ -268,10 +268,10 @@ function renderCalendarToCanvas(params: {
   }
 
   // ── Grid cells ────────────────────────────────────────────────────────
-  const dayNumFontSize = Math.round(cellW * 0.13)
-  const obsFontSize = Math.round(cellW * 0.082)
-  const evtFontSize = Math.round(cellW * 0.082)
-  const lineH = obsFontSize * 1.4
+  const dayNumFontSize = Math.round(cellW * 0.12)
+  const obsFontSize = Math.round(cellW * 0.073)
+  const evtFontSize = Math.round(cellW * 0.073)
+  const lineH = obsFontSize * 1.45
 
   for (let i = 0; i < numRows * 7; i++) {
     const col = i % 7
@@ -405,8 +405,8 @@ export async function exportCalendarPDF(
   })
 
   // ── Render calendar grid to canvas ───────────────────────────────
-  // Canvas dimensions at 150 DPI for the printable area
-  const DPI = 150
+  // Canvas dimensions at 200 DPI for the printable area
+  const DPI = 200
   const canvasW = Math.round(printableWidth * DPI)
   const gridAreaH = pageHeight - margin - (margin + headerHeight)
   const canvasH = Math.round(gridAreaH * DPI)
