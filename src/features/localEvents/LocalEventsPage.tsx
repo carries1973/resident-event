@@ -288,7 +288,7 @@ export function LocalEventsPage() {
         endDate,
       })
 
-      const result = await generateAI({ systemPrompt, userMessage, temperature: 0.6, maxTokens: 4096 })
+      const result = await generateAI({ systemPrompt, userMessage, temperature: 0.6, maxTokens: 2000 })
       const parsed = parseAiResponse(result.text, aiLocalEventsResponseSchema)
 
       if (!parsed.success) {

@@ -101,6 +101,7 @@ export function PlannerPage() {
       const result = await generateAI({
         systemPrompt,
         userMessage: `Generate ${planState.eventCount} events for ${selectedBuilding.name} from ${planState.startDate} to ${planState.endDate}.`,
+        maxTokens: 5000,
       })
 
       // Try the new REP v3.3 wrapper format first (object with events + metadata)

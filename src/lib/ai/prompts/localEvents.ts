@@ -87,10 +87,11 @@ QUALITY RULES:
 3. Use Canadian English spelling throughout
 4. Be specific to ${building.city} — mention real parks, districts, or venues by name if commonly known
 5. If nearby venues are listed, prioritise events happening at or near those venues
-6. Generate 8–15 events spread across the date window
+6. Generate 6–10 events spread across the date window (quality over quantity)
 7. Vary the categories: markets, festivals, arts, sports, community events
-8. For each event, write a "whyRelevant" field (1 sentence) explaining specifically why THIS building's residents would enjoy or benefit from knowing about it
+8. For each event, write a "whyRelevant" field (1 sentence max) explaining why THIS building's residents would value it
 9. Omit the url field entirely
+10. Keep descriptions concise — 1 sentence maximum
 
 Return ONLY valid JSON matching this exact structure:
 {

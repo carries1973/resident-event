@@ -98,6 +98,7 @@ export function QuickIdeas({ building, onExpandToFullPlan, personaOverride, even
         const result = await generateAI({
           systemPrompt: system,
           userMessage: user,
+          maxTokens: 1200,
         })
 
         const parsed = parseAiResponse(result.text, aiQuickIdeasArraySchema)

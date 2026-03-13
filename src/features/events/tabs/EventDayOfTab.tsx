@@ -164,7 +164,7 @@ export function EventDayOfTab({ event }: EventDayOfTabProps) {
     try {
       const buildingName = building?.name ?? 'Your Building'
       const { system, user } = buildDayOfPrompt(event, buildingName)
-      const result = await generateAI({ systemPrompt: system, userMessage: user })
+      const result = await generateAI({ systemPrompt: system, userMessage: user, maxTokens: 1000 })
       const parsed = parseAiResponse<AiDayOfChecklist>(result.text, aiDayOfChecklistSchema)
 
       if (!parsed.success) {
