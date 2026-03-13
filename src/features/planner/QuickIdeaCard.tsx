@@ -95,43 +95,45 @@ export function QuickIdeaCard({ idea, building, onDismiss, onExpandToFullPlan }:
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 pt-1 border-t border-border-default mt-auto">
-          {saved ? (
-            <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
-              <Check className="h-4 w-4" />
-              Saved to Events
-            </span>
-          ) : (
+        <div className="pt-1 border-t border-border-default mt-auto space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {saved ? (
+              <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium">
+                <Check className="h-4 w-4" />
+                Saved to Events
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-primary text-primary hover:bg-primary/10 flex-1 min-w-0"
+                onClick={handleSaveAsDraft}
+                title="Save this idea as a draft event — add dates and details later in Events"
+              >
+                <CalendarPlus className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Save to Events</span>
+              </Button>
+            )}
             <Button
               size="sm"
-              variant="outline"
-              className="gap-1.5 border-primary text-primary hover:bg-primary/10"
-              onClick={handleSaveAsDraft}
-              title="Save this idea as a draft event — add dates and details later in Events"
+              variant="default"
+              className="gap-1.5 flex-1 min-w-0"
+              onClick={handleExpandToFullPlan}
+              title="Use this as the starting point for a full AI-generated event plan with dates, budget, and logistics"
             >
-              <CalendarPlus className="h-3.5 w-3.5" />
-              Save to Events
+              <Wand2 className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Build Full Plan</span>
             </Button>
-          )}
-          <Button
-            size="sm"
-            variant="default"
-            className="gap-1.5"
-            onClick={handleExpandToFullPlan}
-            title="Use this as the starting point for a full AI-generated event plan with dates, budget, and logistics"
-          >
-            <Wand2 className="h-3.5 w-3.5" />
-            Build Full Plan
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onDismiss}
-            className="ml-auto text-text-muted hover:text-danger"
-            aria-label="Dismiss idea"
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onDismiss}
+              className="text-text-muted hover:text-danger shrink-0"
+              aria-label="Dismiss idea"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
