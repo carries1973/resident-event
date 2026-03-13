@@ -181,14 +181,7 @@ export async function compositePoster(opts: CompositorOptions): Promise<Composit
     shadowColor: finalShadow,
   })
 
-  // 12. PCG watermark — subtle attribution in bottom-right corner
-  ctx.save()
-  ctx.font = '22px "Inter", system-ui, sans-serif'
-  ctx.fillStyle = 'rgba(255,255,255,0.30)'
-  ctx.textAlign = 'right'
-  ctx.textBaseline = 'bottom'
-  ctx.fillText('propertyconsultinggroup.ca', POSTER_WIDTH - 24, POSTER_HEIGHT - 18)
-  ctx.restore()
+  // No watermark — clean poster output
 
   // ── Export helpers ───────────────────────────────────────────────
 
