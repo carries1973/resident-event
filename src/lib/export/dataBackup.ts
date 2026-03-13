@@ -16,6 +16,7 @@ const STORE_KEYS = [
   'rei-event-store',
   'rei-notification-store',
   'rei-local-events-v1',
+  'rei-quick-ideas-sessions',
 ] as const
 
 /** Current backup format version */
@@ -138,22 +139,18 @@ export function importAllData(json: string): { success: boolean; error?: string 
  * this the page should be reloaded so stores reinitialise with defaults.
  */
 export function clearAllData(): void {
-  // Remove all known store keys
-  for (const key of STORE_KEYS) {
-    localStorage.removeItem(key)
-  }
-
-  // Also sweep for any other rei- prefixed keys (e.g. future stores,
-  // renamed keys, or planner session state)
-  const keysToRemove: string[] = []
+  // Collect ALL keys first (snapshot), then remove — avoids iterator
+  // mutation bugs where removing items shifts indices mid-loop.
+  const allKeys: string[] = []
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (key && key.startsWith('rei-')) {
-      keysToRemove.push(key)
-    }
+    if (key) allKeys.push(key)
   }
-  for (const key of keysToRemove) {
-    localStorage.removeItem(key)
+  // Remove every rei- prefixed key (covers all known stores + any future ones)
+  for (const key of allKeys) {
+    if (key.startsWith('rei-')) {
+      localStorage.removeItem(key)
+    }
   }
 }
 

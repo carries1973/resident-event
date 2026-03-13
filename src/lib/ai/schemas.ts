@@ -160,12 +160,20 @@ export const aiLocalEventSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
     startTime: z
       .string()
-      .regex(/^\d{2}:\d{2}$/, 'Start time must be in HH:mm format')
-      .optional(),
+      .optional()
+      .transform((val) => {
+        // Gracefully discard any non-HH:mm value the AI returns (e.g. "10:00 AM", "TBD", "varies")
+        if (!val || !/^\d{2}:\d{2}$/.test(val)) return undefined
+        return val
+      }),
     endTime: z
       .string()
-      .regex(/^\d{2}:\d{2}$/, 'End time must be in HH:mm format')
-      .optional(),
+      .optional()
+      .transform((val) => {
+        // Gracefully discard any non-HH:mm value the AI returns (e.g. "5:00 PM", "TBD", "varies")
+        if (!val || !/^\d{2}:\d{2}$/.test(val)) return undefined
+        return val
+      }),
     location: z.string().default(''),
     category: z
       .enum(['market', 'festival', 'arts', 'sports', 'community', 'other'])

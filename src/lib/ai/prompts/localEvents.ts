@@ -108,7 +108,12 @@ Return ONLY valid JSON matching this exact structure:
   ]
 }
 
-startTime and endTime are optional — omit them for all-day events or events with unknown times.`
+TIME FORMAT RULES (CRITICAL):
+- startTime and endTime MUST be in 24-hour HH:mm format (e.g. "10:00", "14:30", "18:00")
+- Do NOT use 12-hour format (e.g. "10:00 AM" is WRONG — use "10:00")
+- Do NOT use values like "TBD", "varies", "all day", or any text string
+- If the time is unknown or the event is all-day, OMIT the field entirely — do not include it at all
+- It is always better to omit startTime/endTime than to include an incorrect format`
 
   const userMessage = `Generate local community events happening in or around ${building.city}, ${building.province} between ${startDate} and ${endDate} that are relevant to ${primaryPersona?.label ?? 'the residents'} living at ${building.name}${building.address ? ` (${building.address})` : ''}. Return JSON only.`
 
