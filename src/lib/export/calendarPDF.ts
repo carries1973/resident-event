@@ -112,6 +112,34 @@ function canvasTruncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
 }
 
 /**
+ * Word-wrap canvas text into lines that fit within maxWidth pixels.
+ * Returns an array of line strings.
+ */
+function canvasWrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  // Handle emoji prefix (e.g. "🥞 National Pancake Day") — keep emoji on first line
+  const words = text.split(' ')
+  const lines: string[] = []
+  let current = ''
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word
+    if (ctx.measureText(test).width <= maxWidth) {
+      current = test
+    } else {
+      if (current) lines.push(current)
+      // If a single word is too wide, truncate it
+      if (ctx.measureText(word).width > maxWidth) {
+        lines.push(canvasTruncate(ctx, word, maxWidth))
+        current = ''
+      } else {
+        current = word
+      }
+    }
+  }
+  if (current) lines.push(current)
+  return lines
+}
+
+/**
  * Draw the branded page header (logo + month/year title) using jsPDF.
  */
 async function drawPageHeader(
@@ -240,10 +268,10 @@ function renderCalendarToCanvas(params: {
   }
 
   // ── Grid cells ────────────────────────────────────────────────────────
-  const dayNumFontSize = Math.round(cellW * 0.14)
-  const obsFontSize = Math.round(cellW * 0.095)
-  const evtFontSize = Math.round(cellW * 0.095)
-  const lineH = obsFontSize * 1.35
+  const dayNumFontSize = Math.round(cellW * 0.13)
+  const obsFontSize = Math.round(cellW * 0.082)
+  const evtFontSize = Math.round(cellW * 0.082)
+  const lineH = obsFontSize * 1.4
 
   for (let i = 0; i < numRows * 7; i++) {
     const col = i % 7
@@ -289,9 +317,12 @@ function renderCalendarToCanvas(params: {
       ctx.fillStyle = OBS_COLOR
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
-      const truncated = canvasTruncate(ctx, label, contentMaxW)
-      ctx.fillText(truncated, contentX, contentY)
-      contentY += lineH
+      const lines = canvasWrapText(ctx, label, contentMaxW)
+      for (const line of lines) {
+        if (contentY + lineH > cellY + cellH - 4) break
+        ctx.fillText(line, contentX, contentY)
+        contentY += lineH
+      }
     }
 
     // Events for this day
@@ -302,9 +333,12 @@ function renderCalendarToCanvas(params: {
       ctx.fillStyle = EVENT_COLOR
       ctx.textAlign = 'left'
       ctx.textBaseline = 'top'
-      const truncated = canvasTruncate(ctx, evtName, contentMaxW)
-      ctx.fillText(truncated, contentX, contentY)
-      contentY += lineH
+      const lines = canvasWrapText(ctx, evtName, contentMaxW)
+      for (const line of lines) {
+        if (contentY + lineH > cellY + cellH - 4) break
+        ctx.fillText(line, contentX, contentY)
+        contentY += lineH
+      }
     }
   }
 
