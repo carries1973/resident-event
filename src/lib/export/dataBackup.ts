@@ -2,11 +2,12 @@
  * Data Backup Utilities
  *
  * JSON export/import for all app data stored in localStorage.
- * Handles the 4 Zustand persisted stores:
+ * Handles all 5 Zustand persisted stores:
  *   - rei-app-store
  *   - rei-building-store
  *   - rei-event-store
  *   - rei-notification-store
+ *   - rei-local-events-v1
  */
 
 const STORE_KEYS = [
@@ -14,6 +15,7 @@ const STORE_KEYS = [
   'rei-building-store',
   'rei-event-store',
   'rei-notification-store',
+  'rei-local-events-v1',
 ] as const
 
 /** Current backup format version */
@@ -27,6 +29,7 @@ interface BackupPayload {
     buildings: unknown
     events: unknown
     notifications: unknown
+    localEvents?: unknown
   }
 }
 
@@ -55,6 +58,7 @@ export function exportAllData(): string {
       buildings: readStore('rei-building-store'),
       events: readStore('rei-event-store'),
       notifications: readStore('rei-notification-store'),
+      localEvents: readStore('rei-local-events-v1'),
     },
   }
 
@@ -106,6 +110,7 @@ export function importAllData(json: string): { success: boolean; error?: string 
     'rei-building-store': parsed.data.buildings,
     'rei-event-store': parsed.data.events,
     'rei-notification-store': parsed.data.notifications,
+    'rei-local-events-v1': parsed.data.localEvents,
   }
 
   try {
@@ -128,11 +133,26 @@ export function importAllData(json: string): { success: boolean; error?: string 
 /**
  * Clear all app data from localStorage.
  *
- * Removes all 4 Zustand store keys. After calling this the page should
- * be reloaded so stores reinitialise with their defaults.
+ * Removes all known Zustand store keys AND any other keys with the
+ * "rei-" prefix (catches future stores or renamed keys). After calling
+ * this the page should be reloaded so stores reinitialise with defaults.
  */
 export function clearAllData(): void {
+  // Remove all known store keys
   for (const key of STORE_KEYS) {
+    localStorage.removeItem(key)
+  }
+
+  // Also sweep for any other rei- prefixed keys (e.g. future stores,
+  // renamed keys, or planner session state)
+  const keysToRemove: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith('rei-')) {
+      keysToRemove.push(key)
+    }
+  }
+  for (const key of keysToRemove) {
     localStorage.removeItem(key)
   }
 }

@@ -295,24 +295,42 @@ export function DataBackupPage() {
         </CardContent>
       </Card>
 
-      {/* ── Clear All Data ──────────────────────────────────────────── */}
-      <Card>
+      {/* ── Reset / Clear All Data ──────────────────────────────────── */}
+      <Card className="border-destructive/40">
         <CardContent>
-          <h2 className="text-lg font-semibold text-foreground mb-2">
-            Clear All Data
-          </h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Permanently delete all buildings, events, settings, and
-            notifications. This action cannot be undone.
+          <div className="flex items-center gap-2 mb-2">
+            <Trash2 className="size-5 text-destructive" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Reset App Data
+            </h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-2">
+            Permanently delete <strong>all buildings, events, local events, settings, and
+            notifications</strong> stored in this browser. The app will return to its
+            initial empty state.
           </p>
-          <Button
-            variant="destructive"
-            onClick={() => setClearDialogOpen(true)}
-            className="gap-2"
-          >
-            <Trash2 className="size-4" />
-            Clear All Data
-          </Button>
+          <p className="text-sm text-muted-foreground mb-4">
+            This action cannot be undone. Export a backup above first if you want to
+            keep your data.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              className="gap-2"
+            >
+              <Download className="size-4" />
+              Export Backup First
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setClearDialogOpen(true)}
+              className="gap-2"
+            >
+              <Trash2 className="size-4" />
+              Reset All Data
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -320,9 +338,9 @@ export function DataBackupPage() {
       <ConfirmDialog
         open={clearDialogOpen}
         onOpenChange={setClearDialogOpen}
-        title="Clear All Data"
-        description="This will permanently delete all buildings, events, settings, and notifications. This action cannot be undone. Please export a backup first if you want to keep your data."
-        confirmLabel="Clear Everything"
+        title="Reset All App Data"
+        description="This will permanently delete all buildings, events, local events, settings, and notifications stored in this browser. The app will return to its initial empty state. This action cannot be undone."
+        confirmLabel="Reset Everything"
         variant="destructive"
         confirmText="DELETE ALL DATA"
         confirmPlaceholder="Type DELETE ALL DATA to confirm"
