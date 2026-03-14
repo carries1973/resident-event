@@ -193,8 +193,9 @@ export const useAppStore = create<AppState & AppActions>()(
         return (state?: AppState & AppActions) => {
           if (!state) return
 
-          // Sync theme class on rehydration
-          document.documentElement.classList.toggle('dark', state.theme === 'dark')
+          // Always default to light mode — override any stored dark preference
+          state.theme = 'light'
+          document.documentElement.classList.remove('dark')
 
           // Always reset calendar to current month on load, regardless of
           // what was persisted. This prevents stale month/year from localStorage.
