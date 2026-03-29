@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { BrowserRouter } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { Providers } from './providers'
 import { AppRoutes } from './routes'
 import { useAppStore } from '@/lib/store/appStore'
@@ -20,6 +21,7 @@ export function App() {
         <ThemeSync />
         <NotificationRunner />
         <AppRoutes />
+        <SpeedInsights />
       </Providers>
     </BrowserRouter>
   )
